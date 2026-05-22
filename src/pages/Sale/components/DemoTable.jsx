@@ -4,7 +4,7 @@ import { cn } from '../../../lib/utils';
 
 const DEMO_INCOME = 50000;
 
-export const DemoTable = ({ demos, onEdit, onDelete }) => {
+export const DemoTable = ({ demos, onEdit, onDelete, onQuote }) => {
   const [activeMenu, setActiveMenu] = useState(null);
   const validDemos = demos.filter((d) => d.isValid);
   const totalIncome = validDemos.length * DEMO_INCOME;
@@ -26,6 +26,7 @@ export const DemoTable = ({ demos, onEdit, onDelete }) => {
               <th className="pl-6 pr-4 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">STT</th>
               <th className="px-4 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Cơ hội / Khách hàng</th>
               <th className="px-4 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Thời gian</th>
+              <th className="px-4 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Phụ trách</th>
               <th className="px-4 py-5 text-center text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Tài liệu</th>
               <th className="px-4 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Hoạt động</th>
               <th className="px-4 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Thu nhập</th>
@@ -68,6 +69,19 @@ export const DemoTable = ({ demos, onEdit, onDelete }) => {
                       <Calendar size={12} />
                       {demo.demoDate}
                     </div>
+                  </td>
+
+                  <td className="px-4 py-6">
+                    {demo.assignedRepName ? (
+                      <div className="flex items-center gap-2 text-[11px] font-black text-slate-700 bg-slate-100/80 px-3 py-1.5 rounded-full w-fit border border-slate-200/40">
+                        <div className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[8px] font-black uppercase">
+                          {demo.assignedRepName.charAt(0)}
+                        </div>
+                        {demo.assignedRepName}
+                      </div>
+                    ) : (
+                      <span className="text-[11px] font-bold text-slate-400 italic">Chưa phân công</span>
+                    )}
                   </td>
 
                   <td className="px-4 py-6 text-center">
@@ -127,6 +141,19 @@ export const DemoTable = ({ demos, onEdit, onDelete }) => {
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
                           <div className="absolute right-0 top-full mt-2 w-40 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <button 
+                              onClick={() => {
+                                if (onQuote) onQuote(demo);
+                                setActiveMenu(null);
+                              }}
+                              className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-black text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-colors group/item"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FileText size={14} className="text-emerald-500" />
+                                <span>Báo giá</span>
+                              </div>
+                              <ChevronRight size={12} className="opacity-0 group-hover/item:opacity-100 transition-opacity animate-in fade-in" />
+                            </button>
                             <button 
                               onClick={() => {
                                 onEdit(demo);

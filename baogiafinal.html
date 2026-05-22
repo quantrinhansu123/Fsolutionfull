@@ -33,7 +33,6 @@
 
         .preview-pane {
             flex: 1;
-            padding: 40px;
             overflow-y: auto;
             display: flex;
             justify-content: center;
@@ -135,7 +134,7 @@
         .discount-row td { border-top: 1px solid #e5e7eb; font-style: italic; color: #64748b; }
         .total-row td { border-top: 2px solid var(--primary-color); }
         .total-label { text-align: right; font-weight: 700; color: var(--primary-color); padding-top: 15px !important; }
-        .total-value-cell { background: var(--accent-color); color: white; font-weight: 800; font-size: 16px; text-align: right; padding: 12px 10px !important; border-radius: 4px; }
+        .total-value-cell { background: var(--accent-color); color: white; font-weight: 800; font-size: 16px; text-align: right; padding: 12px 10px !important; border: none !important; }
 
         .timeline-box { display: flex; justify-content: space-between; margin-top: 20px; position: relative; }
         .timeline-box::before { content: ''; position: absolute; top: 12px; left: 0; right: 0; height: 2px; background: #e2e8f0; z-index: 0; }
@@ -249,11 +248,13 @@
                                     <tbody id="view-pricing-body"></tbody>
                                     <tfoot>
                                         <tr class="discount-row" id="view-discount-row" style="display:none">
-                                            <td colspan="3" style="text-align: right; padding: 8px 10px;">Giảm giá: <span id="view-discount-name"></span></td>
+                                            <td class="check-col"></td>
+                                            <td colspan="2" style="text-align: right; padding: 8px 10px;">Giảm giá: <span id="view-discount-name"></span></td>
                                             <td style="text-align: right; color: #ef4444; font-weight: 600;">- <span id="view-discount-value">0</span></td>
                                         </tr>
                                         <tr class="total-row">
-                                            <td colspan="3" class="total-label">TỔNG THANH TOÁN</td>
+                                            <td class="check-col"></td>
+                                            <td colspan="2" class="total-label">TỔNG THANH TOÁN</td>
                                             <td class="total-value-cell" id="view-total">0 VNĐ</td>
                                         </tr>
                                     </tfoot>
@@ -496,7 +497,15 @@ Chủ TK: HOANG THU HUE</textarea>
         function addNewPaymentPhase() { quoteData.paymentPhases.push({phase:'', timing:'', val:'0%', desc:''}); renderAll(); }
 
         window.onload = () => { loadDraft(); init(); };
-        function init() { if(!document.getElementById('inp-date').value) document.getElementById('inp-date').valueAsDate = new Date(); renderAll(); }
+        function init() { 
+            if(!document.getElementById('inp-date').value) document.getElementById('inp-date').valueAsDate = new Date(); 
+            const customerName = localStorage.getItem('baogia_customer');
+            if (customerName) {
+                document.getElementById('inp-client').value = customerName;
+                localStorage.removeItem('baogia_customer');
+            }
+            renderAll(); 
+        }
     </script>
 </body>
 </html>

@@ -85,7 +85,11 @@ export const ContractTable = ({ contracts }) => {
                   <td className="px-4 py-3">
                     <PaymentProgressBar
                       contractAmount={contract.contractAmount}
-                      paidAmount={contract.paidAmount}
+                      paidAmount={
+                        contract.status === 'paid'
+                          ? contract.contractAmount
+                          : contract.contractAmount * 0.5
+                      }
                     />
                   </td>
                 </tr>

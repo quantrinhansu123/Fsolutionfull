@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useProject } from '../../../context/ProjectContext';
+import { supabase } from '../../../lib/supabaseClient';
 import { cn } from '../../../lib/utils';
 
 const formatCurrency = (value: number) => {
@@ -9,22 +11,97 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const DEFAULT_DEPARTMENTS = [
+  { name: 'Marketing', percent: 2.5, code: 'marketing', paid: 0, status: 'Đang xử lý', color: '#f43f5e' },
+  { name: 'Sale', percent: 32, code: 'sale', paid: 2000000, status: 'Hoàn thành', color: '#6366f1' },
+  { name: 'BA', percent: 8, code: 'ba', paid: 0, status: 'Chờ duyệt', color: '#f59e0b' },
+  { name: 'Product', percent: 12, code: 'product', paid: 500000, status: 'Đang xử lý', color: '#10b981' },
+  { name: 'Dev', percent: 37, code: 'dev', paid: 1000000, status: 'Hoàn thành', color: '#3b82f6' },
+  { name: 'CS', percent: 10, code: 'cs', paid: 0, status: 'Chờ duyệt', color: '#8b5cf6' },
+];
+
 export const DepartmentTable = () => {
   const { selectedProject } = useProject();
+  const [departments, setDepartments] = useState<any[]>([]);
   const fund = selectedProject.revenue * 0.6;
 
-  const departments = [
-    { name: 'Marketing', percent: 2.5, paid: 0, status: 'Đang xử lý', color: '#f43f5e' },
-    { name: 'Sale', percent: 32, paid: 2000000, status: 'Hoàn thành', color: '#6366f1' },
-    { name: 'BA', percent: 8, paid: 0, status: 'Chờ duyệt', color: '#f59e0b' },
-    { name: 'Product', percent: 12, paid: 500000, status: 'Đang xử lý', color: '#10b981' },
-    { name: 'Dev', percent: 37, paid: 1000000, status: 'Hoàn thành', color: '#3b82f6' },
-    { name: 'CS', percent: 10, paid: 0, status: 'Chờ duyệt', color: '#8b5cf6' },
-  ].map(dept => ({
-    ...dept,
-    estimated: (fund * dept.percent) / 100,
-    remaining: (fund * dept.percent) / 100 - dept.paid
-  }));
+  useEffect(() => {
+    const fetchDepartmentData = async () => {
+      try {
+        // 1. Fetch rates
+        let ratesQuery = supabase.from('income_rate_config').select('bo_phan, ty_le');
+        if (selectedProject.id !== 'all') {
+          ratesQuery = ratesQuery.eq('project_id', selectedProject.id);
+        }
+        const { data: ratesData, error: ratesError } = await ratesQuery;
+        if (ratesError) throw ratesError;
+
+        // 2. Fetch paid/remaining from income_summary
+        let summaryQuery = supabase.from('income_summary').select('bo_phan, tong_thu_nhap, da_nhan, con_lai');
+        if (selectedProject.id !== 'all') {
+          summaryQuery = summaryQuery.eq('project_id', selectedProject.id);
+        }
+        const { data: summaryData, error: summaryError } = await summaryQuery;
+        if (summaryError) throw summaryError;
+
+        // Map and compute for each department
+        const mappedDepts = DEFAULT_DEPARTMENTS.map(dept => {
+          // Calculate rate percentage
+          let percent = dept.percent;
+          if (ratesData && ratesData.length > 0) {
+            const matchRates = ratesData.filter(r => r.bo_phan === dept.code);
+            if (matchRates.length > 0) {
+              const count = selectedProject.id === 'all' ? ratesData.filter(r => r.bo_phan === dept.code).length : 1;
+              percent = matchRates.reduce((sum, r) => sum + Number(r.ty_le), 0) / (count || 1);
+            }
+          }
+
+          // Calculate paid amount
+          let paid = 0;
+          let remaining = (fund * percent) / 100;
+          
+          if (summaryData && summaryData.length > 0) {
+            const matches = summaryData.filter(s => s.bo_phan === dept.code);
+            paid = matches.reduce((sum, s) => sum + (Number(s.da_nhan) || 0), 0);
+            
+            const totalRemaining = matches.reduce((sum, s) => sum + (Number(s.con_lai) || 0), 0);
+            if (matches.length > 0) {
+              remaining = totalRemaining;
+            }
+          }
+
+          // Determine status
+          let status = 'Chờ duyệt';
+          if (remaining <= 0 && paid > 0) {
+            status = 'Hoàn thành';
+          } else if (paid > 0) {
+            status = 'Đang xử lý';
+          }
+
+          return {
+            ...dept,
+            percent: Number(percent.toFixed(1)),
+            estimated: (fund * percent) / 100,
+            paid,
+            remaining,
+            status
+          };
+        });
+
+        setDepartments(mappedDepts);
+      } catch (err) {
+        console.error('Error fetching department data:', err);
+        const fallback = DEFAULT_DEPARTMENTS.map(dept => ({
+          ...dept,
+          estimated: (fund * dept.percent) / 100,
+          remaining: (fund * dept.percent) / 100 - dept.paid
+        }));
+        setDepartments(fallback);
+      }
+    };
+
+    fetchDepartmentData();
+  }, [selectedProject.id, selectedProject.revenue]);
 
   const totalEstimated = departments.reduce((sum, d) => sum + d.estimated, 0);
   const totalPaid = departments.reduce((sum, d) => sum + d.paid, 0);
@@ -109,3 +186,4 @@ export const DepartmentTable = () => {
     </div>
   );
 };
+

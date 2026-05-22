@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useProject } from '../../../context/ProjectContext';
+import { supabase } from '../../../lib/supabaseClient';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('vi-VN', { 
@@ -10,14 +12,73 @@ const formatCurrency = (value: number) => {
 
 export const AMCTable = () => {
   const { selectedProject } = useProject();
+  const [amcRows, setAmcRows] = useState<any[]>([]);
   const amc = selectedProject.amc;
 
-  const amcData = [
-    { role: 'Sale', percent: 10, y1: amc * 0.1, y2: 0, color: '#6366f1' },
-    { role: 'Account', percent: 20, y1: amc * 0.2, y2: amc * 0.2, color: '#3b82f6' },
-    { role: 'Technical Support', percent: 50, y1: amc * 0.5, y2: amc * 0.5, color: '#0ea5e9' },
-    { role: 'Company Profit', percent: 20, y1: amc * 0.2, y2: amc * 0.2, color: '#10b981' },
-  ];
+  useEffect(() => {
+    const fetchAmcPayments = async () => {
+      try {
+        let query = supabase.from('amc_payments').select('*');
+        if (selectedProject.id !== 'all') {
+          query = query.eq('project_id', selectedProject.id);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+
+        let saleY1 = 0, saleY2 = 0;
+        let csY1 = 0, csY2 = 0;
+        let devY1 = 0, devY2 = 0;
+        let prodY1 = 0, prodY2 = 0;
+        let compY1 = 0, compY2 = 0;
+
+        if (data && data.length > 0) {
+          data.forEach(item => {
+            if (item.nam_thu === 1) {
+              saleY1 += Number(item.phan_sale) || 0;
+              csY1 += Number(item.phan_cs) || 0;
+              devY1 += Number(item.phan_dev) || 0;
+              prodY1 += Number(item.phan_product) || 0;
+              compY1 += Number(item.phan_cong_ty) || 0;
+            } else {
+              saleY2 += Number(item.phan_sale) || 0;
+              csY2 += Number(item.phan_cs) || 0;
+              devY2 += Number(item.phan_dev) || 0;
+              prodY2 += Number(item.phan_product) || 0;
+              compY2 += Number(item.phan_cong_ty) || 0;
+            }
+          });
+          
+          setAmcRows([
+            { role: 'Sale chiết khấu', percent: 20, y1: saleY1, y2: saleY2, color: '#6366f1' },
+            { role: 'CS & Triển khai', percent: 40, y1: csY1, y2: csY2, color: '#8b5cf6' },
+            { role: 'Phát triển Dev', percent: 20, y1: devY1, y2: devY2, color: '#3b82f6' },
+            { role: 'Quản trị Product', percent: 10, y1: prodY1, y2: prodY2, color: '#10b981' },
+            { role: 'Lợi nhuận Công ty', percent: 10, y1: compY1, y2: compY2, color: '#0ea5e9' },
+          ]);
+        } else {
+          setAmcRows([
+            { role: 'Sale chiết khấu', percent: 20, y1: amc * 0.2, y2: 0, color: '#6366f1' },
+            { role: 'CS & Triển khai', percent: 40, y1: amc * 0.4, y2: amc * 0.4, color: '#8b5cf6' },
+            { role: 'Phát triển Dev', percent: 20, y1: amc * 0.2, y2: amc * 0.2, color: '#3b82f6' },
+            { role: 'Quản trị Product', percent: 10, y1: amc * 0.1, y2: amc * 0.1, color: '#10b981' },
+            { role: 'Lợi nhuận Công ty', percent: 10, y1: amc * 0.1, y2: amc * 0.1, color: '#0ea5e9' },
+          ]);
+        }
+      } catch (err) {
+        console.error('Error fetching AMC payments:', err);
+        setAmcRows([
+          { role: 'Sale chiết khấu', percent: 20, y1: amc * 0.2, y2: 0, color: '#6366f1' },
+          { role: 'CS & Triển khai', percent: 40, y1: amc * 0.4, y2: amc * 0.4, color: '#8b5cf6' },
+          { role: 'Phát triển Dev', percent: 20, y1: amc * 0.2, y2: amc * 0.2, color: '#3b82f6' },
+          { role: 'Quản trị Product', percent: 10, y1: amc * 0.1, y2: amc * 0.1, color: '#10b981' },
+          { role: 'Lợi nhuận Công ty', percent: 10, y1: amc * 0.1, y2: amc * 0.1, color: '#0ea5e9' },
+        ]);
+      }
+    };
+
+    fetchAmcPayments();
+  }, [selectedProject.id, amc]);
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-300 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.07)]">
@@ -57,7 +118,7 @@ export const AMCTable = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {amcData.map((row, index) => (
+              {amcRows.map((row, index) => (
                 <tr key={index} className="group hover:bg-white transition-all duration-200">
                   <td className="pl-8 pr-4 py-5">
                     <div className="flex items-center gap-3">
@@ -105,3 +166,4 @@ export const AMCTable = () => {
     </div>
   );
 };
+

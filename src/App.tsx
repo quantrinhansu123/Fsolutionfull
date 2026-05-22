@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Layout } from './components/layout/Layout';
 import { ProjectProvider } from './context/ProjectContext';
 import Dashboard from './pages/Dashboard';
+import CustomersPage from './pages/Customers';
 import BAPage from './pages/BA/index.jsx';
 import SalePage from './pages/Sale/index.jsx';
 import MarketingPage from './pages/Marketing/index.jsx';
@@ -23,10 +24,13 @@ function App() {
     switch (activeTab) {
       case 'Dashboard':
         return <Dashboard />;
+      case 'Customers':
+        return <CustomersPage />;
       case 'BA/SA':
         return <BAPage />;
       case 'Sale':
-        return <SalePage />;
+        // @ts-ignore
+        return <SalePage onTabChange={setActiveTab} />;
       case 'BaoGia':
         return <BaoGiaPage />;
       case 'Marketing':

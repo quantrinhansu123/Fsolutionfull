@@ -1,68 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { LeadTable } from './components/LeadTable';
 import { MarketingSummary } from './components/MarketingSummary';
 import { LeadFormModal } from './components/LeadFormModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
-
-// Mock data: 5 dòng (3 hợp lệ, 1 thiếu ảnh, 1 trùng)
-const MOCK_LEADS = [
-  {
-    id: 1,
-    name: 'Nguyễn Văn A',
-    phone: '0987654321',
-    source: 'Facebook Ads',
-    image: 'https://example.com/image1.jpg',
-    status: 'qualified',
-    income: 30000,
-    warnings: [],
-  },
-  {
-    id: 2,
-    name: 'Trần Thị B',
-    phone: '0912345678',
-    source: 'Google Ads',
-    image: 'https://example.com/image2.jpg',
-    status: 'qualified',
-    income: 30000,
-    warnings: [],
-  },
-  {
-    id: 3,
-    name: 'Lê Hoàng C',
-    phone: '0901234567',
-    source: 'TikTok',
-    image: null,
-    status: 'disqualified',
-    income: 0,
-    warnings: ['missing_image'],
-  },
-  {
-    id: 4,
-    name: 'Phạm Quốc D',
-    phone: '0988888888',
-    source: 'Facebook Ads',
-    image: 'https://example.com/image4.jpg',
-    status: 'qualified',
-    income: 30000,
-    warnings: [],
-  },
-  {
-    id: 5,
-    name: 'Nguyễn Văn A',
-    phone: '0987654321',
-    source: 'Facebook Ads',
-    image: 'https://example.com/image1-duplicate.jpg',
-    status: 'disqualified',
-    income: 0,
-    warnings: ['duplicate'],
-  },
-];
+import { supabase } from '../../lib/supabaseClient';
 
 export default function MarketingPage() {
-  const [leads, setLeads] = useState(MOCK_LEADS);
+  const [leads, setLeads] = useState([]);
   const [formModal, setFormModal] = useState({ isOpen: false, mode: 'add', lead: null });
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, lead: null });
+
+  // Fetch leads from Supabase database
+  const fetchLeads = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mappedLeads = (data || []).map((l) => {
+        // Tự động tính toán các cảnh báo cảnh báo khi đọc
+        const warnings = [];
+        if (!l.so_dien_thoai) warnings.push('missing_phone');
+        if (!l.anh_nhu_cau_url) warnings.push('missing_image');
+        if (l.la_trung) warnings.push('duplicate');
+        if (!l.nguon) warnings.push('missing_source');
+
+        return {
+          id: l.id, // UUID
+          name: l.ho_ten || '',
+          phone: l.so_dien_thoai || '',
+          source: l.source_id || l.nguon || '',
+          image: l.anh_nhu_cau_url || '',
+          status: l.trang_thai === 'qualified' ? 'qualified' : 'disqualified',
+          income: Number(l.thu_nhap) || 0,
+          warnings,
+        };
+      });
+      setLeads(mappedLeads);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách leads:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
 
   const handleAddLead = () => {
     setFormModal({ isOpen: true, mode: 'add', lead: null });
@@ -76,35 +62,75 @@ export default function MarketingPage() {
     setDeleteModal({ isOpen: true, lead });
   };
 
-  const handleFormSubmit = (formData) => {
-    if (formModal.mode === 'add') {
-      // Thêm lead mới
-      const newLead = {
-        ...formData,
-        id: Math.max(...leads.map(l => l.id), 0) + 1,
-        income: formData.status === 'qualified' ? 30000 : 0,
-        warnings: formData.image ? [] : ['missing_image'],
-      };
-      setLeads([...leads, newLead]);
-    } else {
-      // Cập nhật lead
-      setLeads(
-        leads.map(l =>
-          l.id === formModal.lead.id
-            ? {
-                ...l,
-                ...formData,
-                income: formData.status === 'qualified' ? 30000 : 0,
-                warnings: formData.image ? [] : ['missing_image'],
-              }
-            : l
-        )
-      );
+  const handleFormSubmit = async (formData) => {
+    try {
+      const isQualified = formData.status === 'qualified';
+      const trang_thai = isQualified ? 'qualified' : 'unqualified';
+      const hop_le = isQualified;
+      const thu_nhap = isQualified ? 30000 : 0;
+
+      // Ánh xạ nguồn sang Database enum hợp lệ
+      const adsSources = ['Facebook Ads', 'Google Ads', 'TikTok', 'Instagram', 'Zalo'];
+      const nguon = adsSources.includes(formData.source) ? 'ads' : 'manual';
+      const source_id = formData.source;
+
+      if (formModal.mode === 'add') {
+        // Thêm lead mới
+        const { error } = await supabase
+          .from('leads')
+          .insert([{
+            ho_ten: formData.name,
+            so_dien_thoai: formData.phone,
+            nguon,
+            source_id,
+            anh_nhu_cau_url: formData.image || null,
+            trang_thai,
+            hop_le,
+            thu_nhap,
+          }]);
+
+        if (error) throw error;
+      } else {
+        // Cập nhật lead
+        const { error } = await supabase
+          .from('leads')
+          .update({
+            ho_ten: formData.name,
+            so_dien_thoai: formData.phone,
+            nguon,
+            source_id,
+            anh_nhu_cau_url: formData.image || null,
+            trang_thai,
+            hop_le,
+            thu_nhap,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', formModal.lead.id);
+
+        if (error) throw error;
+      }
+
+      await fetchLeads();
+    } catch (err) {
+      console.error('Lỗi khi lưu lead:', err);
+      alert('Lỗi khi lưu lead: ' + err.message);
     }
   };
 
-  const handleConfirmDelete = (leadId) => {
-    setLeads(leads.filter(l => l.id !== leadId));
+  const handleConfirmDelete = async (leadId) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', leadId);
+
+      if (error) throw error;
+
+      await fetchLeads();
+    } catch (err) {
+      console.error('Lỗi khi xóa lead:', err);
+      alert('Lỗi khi xóa lead: ' + err.message);
+    }
   };
 
   return (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { supabase } from '../../../lib/supabaseClient';
 
 export const TicketModal = ({ isOpen, onClose, onSave, ticket, projects }) => {
   const [formData, setFormData] = useState({
@@ -8,25 +9,55 @@ export const TicketModal = ({ isOpen, onClose, onSave, ticket, projects }) => {
     name: '',
     projectId: '',
     docLink: '',
-    ownerName: '',
+    phu_trach: '',
   });
 
+  const [usersList, setUsersList] = useState([]);
+  const [fetchingUsers, setFetchingUsers] = useState(false);
+
+  // Fetch danh sách users từ Supabase khi mở Modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchUsers = async () => {
+      try {
+        setFetchingUsers(true);
+        const { data, error } = await supabase
+          .from('users')
+          .select('user_id, full_name, role')
+          .order('full_name', { ascending: true });
+
+        if (error) throw error;
+        if (data) {
+          setUsersList(data);
+        }
+      } catch (err) {
+        console.error('Error fetching users in TicketModal:', err);
+      } finally {
+        setFetchingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, [isOpen]);
+
+  // Thiết lập dữ liệu form ban đầu
   useEffect(() => {
     if (ticket) {
       setFormData({
-        ticketId: ticket.ticketId,
-        name: ticket.name,
-        projectId: ticket.projectId,
-        docLink: ticket.docLink || '',
-        ownerName: ticket.owner.name,
+        ticketId: ticket.ma_ticket || '',
+        name: ticket.tieu_de || '',
+        projectId: ticket.project_id || '',
+        docLink: ticket.tai_lieu_url || '',
+        phu_trach: ticket.phu_trach || '',
       });
     } else {
       setFormData({
-        ticketId: `TK-${Math.floor(100 + Math.random() * 900)}`,
+        ticketId: `TK-${Math.floor(1000 + Math.random() * 9000)}`,
         name: '',
         projectId: projects[0]?.id || '',
         docLink: '',
-        ownerName: '',
+        phu_trach: '',
       });
     }
   }, [ticket, isOpen, projects]);
@@ -81,7 +112,7 @@ export const TicketModal = ({ isOpen, onClose, onSave, ticket, projects }) => {
               <select 
                 value={formData.projectId}
                 onChange={(e) => setFormData({...formData, projectId: e.target.value})}
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
               >
                 {projects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -89,20 +120,25 @@ export const TicketModal = ({ isOpen, onClose, onSave, ticket, projects }) => {
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Người thực hiện</label>
-              <input 
-                type="text" 
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Người thực hiện *</label>
+              <select 
                 required
-                value={formData.ownerName}
-                onChange={(e) => setFormData({...formData, ownerName: e.target.value})}
-                placeholder="Tên BA..."
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
+                value={formData.phu_trach}
+                onChange={(e) => setFormData({...formData, phu_trach: e.target.value})}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+              >
+                <option value="">{fetchingUsers ? 'Đang tải...' : 'Chọn nhân viên...'}</option>
+                {usersList.map(u => (
+                  <option key={u.user_id} value={u.user_id}>
+                    {u.full_name} ({u.role === 'admin' ? 'Admin' : u.role === 'manager' ? 'Mngr' : 'Staff'})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Link tài liệu (Google Docs/Notion)</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Link tài liệu đặc tả (Google Docs/Notion)</label>
             <input 
               type="url" 
               value={formData.docLink}
@@ -115,7 +151,7 @@ export const TicketModal = ({ isOpen, onClose, onSave, ticket, projects }) => {
           <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-start gap-2">
             <AlertCircle size={14} className="text-blue-600 mt-0.5 shrink-0" />
             <p className="text-[10px] font-bold text-blue-700 leading-relaxed">
-              Ticket hợp lệ cần có đầy đủ link tài liệu đặc tả để được SA phê duyệt và tính thu nhập.
+              Ticket hợp lệ cần có đầy đủ link tài liệu đặc tả để được phê duyệt nghiệm thu và tính quỹ thu nhập.
             </p>
           </div>
 

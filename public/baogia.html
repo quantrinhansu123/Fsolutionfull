@@ -33,7 +33,6 @@
 
         .preview-pane {
             flex: 1;
-            padding: 40px;
             overflow-y: auto;
             display: flex;
             justify-content: center;
@@ -135,7 +134,7 @@
         .discount-row td { border-top: 1px solid #e5e7eb; font-style: italic; color: #64748b; }
         .total-row td { border-top: 2px solid var(--primary-color); }
         .total-label { text-align: right; font-weight: 700; color: var(--primary-color); padding-top: 15px !important; }
-        .total-value-cell { background: var(--accent-color); color: white; font-weight: 800; font-size: 16px; text-align: right; padding: 12px 10px !important; border-radius: 4px; }
+        .total-value-cell { background: var(--accent-color); color: white; font-weight: 800; font-size: 16px; text-align: right; padding: 12px 10px !important; border: none !important; }
 
         .timeline-box { display: flex; justify-content: space-between; margin-top: 20px; position: relative; }
         .timeline-box::before { content: ''; position: absolute; top: 12px; left: 0; right: 0; height: 2px; background: #e2e8f0; z-index: 0; }
@@ -205,6 +204,7 @@
                     <div class="doc-info">
                         <h2>BÁO GIÁ DỊCH VỤ</h2>
                         <p>Khách hàng: <span id="view-client">...</span></p>
+                        <p>Phụ trách: <span id="view-sale">...</span></p>
                         <p>Ngày: <span id="view-date">...</span></p>
                     </div>
                 </div>
@@ -249,11 +249,13 @@
                                     <tbody id="view-pricing-body"></tbody>
                                     <tfoot>
                                         <tr class="discount-row" id="view-discount-row" style="display:none">
-                                            <td colspan="3" style="text-align: right; padding: 8px 10px;">Giảm giá: <span id="view-discount-name"></span></td>
+                                            <td class="check-col"></td>
+                                            <td colspan="2" style="text-align: right; padding: 8px 10px;">Giảm giá: <span id="view-discount-name"></span></td>
                                             <td style="text-align: right; color: #ef4444; font-weight: 600;">- <span id="view-discount-value">0</span></td>
                                         </tr>
                                         <tr class="total-row">
-                                            <td colspan="3" class="total-label">TỔNG THANH TOÁN</td>
+                                            <td class="check-col"></td>
+                                            <td colspan="2" class="total-label">TỔNG THANH TOÁN</td>
                                             <td class="total-value-cell" id="view-total">0 VNĐ</td>
                                         </tr>
                                     </tfoot>
@@ -302,10 +304,23 @@
 
     <div class="editor-pane">
         <div class="editor-content">
+            <div id="quote-badge" style="display:none; background:#002D72; color:white; border-radius:8px; padding:8px 14px; margin-bottom:12px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px;">
+                📋 <span id="quote-badge-text">Đang tải...</span>
+            </div>
+            
+            <!-- Selector bản cũ -->
+            <div id="history-selector-container" style="display:none; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:12px; margin-bottom:16px;">
+                <label style="font-size:11px; font-weight:700; color:#475569; display:block; margin-bottom:6px;">🕒 XEM LẠI CÁC BẢN ĐÃ LƯU:</label>
+                <select id="history-select" onchange="loadSavedQuoteVersion(this.value)" style="margin-bottom:0; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; width:100%; cursor:pointer;">
+                    <option value="">-- Chọn bản báo giá cũ --</option>
+                </select>
+            </div>
+
             <h2 style="margin-bottom: 20px; color: var(--primary-color);">🛠 SOẠN BÁO GIÁ F-SOLUTION</h2>
             <div class="form-group">
                 <h3>1. Thông tin chung</h3>
                 <label>Khách hàng</label><input type="text" id="inp-client" value="Công ty ABC" oninput="updateGeneral()">
+                <label>Nhân viên phụ trách</label><input type="text" id="inp-sale" value="Chưa rõ" oninput="updateGeneral()">
                 <label>Ngày báo giá</label><input type="date" id="inp-date" oninput="updateGeneral()">
                 <label>Lời mở đầu</label><textarea id="inp-intro" rows="2" oninput="updateGeneral()">Kính gửi Quý khách hàng...</textarea>
                 
@@ -359,7 +374,7 @@ Chủ TK: HOANG THU HUE</textarea>
             </div>
         </div>
         <div class="floating-actions">
-            <button class="btn-save" onclick="saveDraft()">💾 LƯU NHÁP</button>
+            <button class="btn-save" onclick="saveQuote()">💾 LƯU BÁO GIÁ</button>
             <button class="btn-print" onclick="window.print()">🖨 IN PDF</button>
         </div>
     </div>
@@ -371,25 +386,45 @@ Chủ TK: HOANG THU HUE</textarea>
             paymentPhases: [{phase:'Đợt 1', timing:'Sau ký hợp đồng', val:'50%', desc:'Tạm ứng'}]
         };
         let selIdx = 0;
+        let _context = {}; // context từ React: opportunity_id, lead_id, sale_id, lan_bao_gia
 
-        function saveDraft() {
-            const draft = { quoteData, general: { 
-                client: document.getElementById('inp-client').value,
-                date: document.getElementById('inp-date').value,
-                intro: document.getElementById('inp-intro').value,
-                validity: document.getElementById('inp-validity').value,
-                duration: document.getElementById('inp-duration').value,
-                deadline: document.getElementById('inp-deadline').value,
-                solution: document.getElementById('inp-solution').value,
-                hotline: document.getElementById('inp-hotline').value,
-                email: document.getElementById('inp-email').value,
-                discountName: document.getElementById('inp-discount-name').value,
-                discountType: document.getElementById('inp-discount-type').value,
-                discountVal: document.getElementById('inp-discount-val').value,
-                paymentInfo: document.getElementById('inp-payment-info').value
-            }};
-            localStorage.setItem('f_solution_draft', JSON.stringify(draft));
-            alert("Đã lưu nháp!");
+        function buildPayload() {
+            return {
+                quoteData,
+                general: {
+                    client: document.getElementById('inp-client').value,
+                    sale: document.getElementById('inp-sale').value,
+                    date: document.getElementById('inp-date').value,
+                    intro: document.getElementById('inp-intro').value,
+                    validity: document.getElementById('inp-validity').value,
+                    duration: document.getElementById('inp-duration').value,
+                    deadline: document.getElementById('inp-deadline').value,
+                    solution: document.getElementById('inp-solution').value,
+                    hotline: document.getElementById('inp-hotline').value,
+                    email: document.getElementById('inp-email').value,
+                    discountName: document.getElementById('inp-discount-name').value,
+                    discountType: document.getElementById('inp-discount-type').value,
+                    discountVal: document.getElementById('inp-discount-val').value,
+                    paymentInfo: document.getElementById('inp-payment-info').value
+                }
+            };
+        }
+
+        function calcTotal() {
+            const subtotal = quoteData.items.reduce((s, i) => i.selected ? s + Number(i.price) : s, 0);
+            const discType = document.getElementById('inp-discount-type').value;
+            const discVal = Number(document.getElementById('inp-discount-val').value) || 0;
+            const discAmt = discType === 'percent' ? subtotal * (discVal / 100) : discVal;
+            return Math.max(0, subtotal - discAmt);
+        }
+
+        function saveQuote() {
+            const payload = buildPayload();
+            const total = calcTotal();
+            // Backup localStorage như cũ
+            localStorage.setItem('f_solution_draft', JSON.stringify(payload));
+            // Gửi lên React để lưu vào Supabase
+            window.parent.postMessage({ type: 'SAVE_QUOTE', total, payload, context: _context }, '*');
         }
 
         function loadDraft() {
@@ -400,12 +435,134 @@ Chủ TK: HOANG THU HUE</textarea>
             }
         }
 
+        let _history = [];
+        let originalPayload = null;
+
+        // Lắng nghe context từ React (opportunity_id, ten_khach, lan_bao_gia, history)
+        window.addEventListener('message', function(e) {
+            if (!e.data || e.data.type !== 'INIT_BAOGIA') return;
+            _context = e.data;
+            _history = e.data.history || [];
+            
+            // Reset backup original payload since context was reloaded
+            originalPayload = null;
+
+            // Điền tên khách hàng
+            if (e.data.ten_khach) {
+                document.getElementById('inp-client').value = e.data.ten_khach;
+            }
+            // Điền tên nhân viên phụ trách
+            if (e.data.ten_sale) {
+                document.getElementById('inp-sale').value = e.data.ten_sale;
+            }
+            
+            // Luôn đặt ngày mặc định về hôm nay (GMT+7) khi mở/khởi tạo báo giá mới
+            const nowUtc = new Date();
+            const tzOffset = 7 * 60; // GMT+7 tính bằng phút
+            const todayVn = new Date(nowUtc.getTime() + tzOffset * 60 * 1000);
+            const yyyy = todayVn.getUTCFullYear();
+            const mm = String(todayVn.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(todayVn.getUTCDate()).padStart(2, '0');
+            document.getElementById('inp-date').value = `${yyyy}-${mm}-${dd}`;
+
+            updateGeneral();
+            // Hiển thị badge lần báo giá
+            const lan = e.data.lan_bao_gia || 1;
+            const badge = document.getElementById('quote-badge');
+            const badgeText = document.getElementById('quote-badge-text');
+            if (badge && badgeText) {
+                badgeText.textContent = 'Báo giá Lần ' + lan + ' — ' + (e.data.ten_khach || '');
+                badge.style.display = 'flex';
+            }
+
+            // Cập nhật dropdown danh sách bản cũ
+            const select = document.getElementById('history-select');
+            const container = document.getElementById('history-selector-container');
+            if (select && container) {
+                select.innerHTML = '';
+                
+                // Bản đang soạn mới
+                const optNew = document.createElement('option');
+                optNew.value = 'current';
+                optNew.textContent = `✍️ Bản đang soạn mới (Lần ${lan})`;
+                select.appendChild(optNew);
+                
+                if (_history && _history.length > 0) {
+                    const optSep = document.createElement('option');
+                    optSep.disabled = true;
+                    optSep.textContent = '--- Các bản báo giá đã lưu ---';
+                    select.appendChild(optSep);
+
+                    _history.forEach(q => {
+                        const opt = document.createElement('option');
+                        opt.value = q.id;
+                        const dateStr = q.ngay_bao_gia ? new Date(q.ngay_bao_gia).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '';
+                        const formattedAmt = new Intl.NumberFormat('vi-VN').format(q.so_tien || 0);
+                        opt.textContent = `📋 Lần ${q.lan_bao_gia}: ${formattedAmt}đ (${dateStr})`;
+                        select.appendChild(opt);
+                    });
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            }
+        });
+
+        function loadSavedQuoteVersion(value) {
+            if (value === 'current') {
+                // Restore bản đang soạn ban đầu
+                if (originalPayload) {
+                    quoteData = originalPayload.quoteData;
+                    Object.keys(originalPayload.general).forEach(k => {
+                        const el = document.getElementById('inp-' + k);
+                        if (el) el.value = originalPayload.general[k];
+                    });
+                }
+                const badgeText = document.getElementById('quote-badge-text');
+                if (badgeText) {
+                    badgeText.textContent = 'Báo giá Lần ' + (_context.lan_bao_gia || 1) + ' — ' + (_context.ten_khach || '');
+                }
+                renderAll();
+                return;
+            }
+
+            const quote = _history.find(q => q.id === value);
+            if (!quote || !quote.noi_dung_json) return;
+
+            // Backup bản đang soạn hiện tại nếu chưa backup
+            if (!originalPayload) {
+                originalPayload = buildPayload();
+            }
+
+            // Load dữ liệu từ bản báo giá cũ vào form
+            const d = quote.noi_dung_json;
+            if (d.quoteData) {
+                quoteData = d.quoteData;
+            }
+            if (d.general) {
+                Object.keys(d.general).forEach(k => {
+                    const el = document.getElementById('inp-' + k);
+                    if (el) el.value = d.general[k];
+                });
+            }
+            
+            const badgeText = document.getElementById('quote-badge-text');
+            if (badgeText) {
+                badgeText.textContent = 'Đang xem bản cũ: Lần ' + quote.lan_bao_gia + ' — ' + (d.general?.client || '');
+            }
+
+            renderAll();
+        }
+
         function removeVietnameseTones(str) {
             return str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toUpperCase();
         }
 
         function updateGeneral() {
             document.getElementById('view-client').textContent = document.getElementById('inp-client').value;
+            if (document.getElementById('inp-sale') && document.getElementById('view-sale')) {
+                document.getElementById('view-sale').textContent = document.getElementById('inp-sale').value;
+            }
             document.getElementById('view-intro').textContent = document.getElementById('inp-intro').value;
             document.getElementById('view-validity').textContent = document.getElementById('inp-validity').value;
             document.getElementById('view-duration').textContent = document.getElementById('inp-duration').value;
@@ -415,7 +572,12 @@ Chủ TK: HOANG THU HUE</textarea>
             document.getElementById('view-email').textContent = document.getElementById('inp-email').value;
             
             const dInput = document.getElementById('inp-date').value;
-            document.getElementById('view-date').textContent = dInput ? new Date(dInput).toLocaleDateString('vi-VN') : '...';
+            if (dInput) {
+                const parts = dInput.split('-');
+                document.getElementById('view-date').textContent = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dInput;
+            } else {
+                document.getElementById('view-date').textContent = '...';
+            }
 
             const subtotal = quoteData.items.reduce((s, i) => i.selected ? s + Number(i.price) : s, 0);
             const discName = document.getElementById('inp-discount-name').value;
@@ -496,7 +658,26 @@ Chủ TK: HOANG THU HUE</textarea>
         function addNewPaymentPhase() { quoteData.paymentPhases.push({phase:'', timing:'', val:'0%', desc:''}); renderAll(); }
 
         window.onload = () => { loadDraft(); init(); };
-        function init() { if(!document.getElementById('inp-date').value) document.getElementById('inp-date').valueAsDate = new Date(); renderAll(); }
+        function init() { 
+            if(!document.getElementById('inp-date').value) {
+                const nowUtc = new Date();
+                const tzOffset = 7 * 60; // GMT+7 tính bằng phút
+                const todayVn = new Date(nowUtc.getTime() + tzOffset * 60 * 1000);
+                const yyyy = todayVn.getUTCFullYear();
+                const mm = String(todayVn.getUTCMonth() + 1).padStart(2, '0');
+                const dd = String(todayVn.getUTCDate()).padStart(2, '0');
+                document.getElementById('inp-date').value = `${yyyy}-${mm}-${dd}`;
+            }
+            // Backward compat: đọc localStorage cũ nếu không có postMessage
+            const customerName = localStorage.getItem('baogia_customer');
+            if (customerName) {
+                document.getElementById('inp-client').value = customerName;
+                localStorage.removeItem('baogia_customer');
+            }
+            renderAll();
+            // Thông báo cho React rằng iframe đã sẵn sàng nhận context
+            window.parent.postMessage({ type: 'BAOGIA_READY' }, '*');
+        }
     </script>
 </body>
 </html>

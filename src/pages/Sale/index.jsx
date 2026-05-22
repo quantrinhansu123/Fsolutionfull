@@ -1,130 +1,217 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DemoTable } from './components/DemoTable';
 import { ContractTable } from './components/ContractTable';
 import { DemoModal } from './components/DemoModal';
 import { Plus, LayoutGrid, FileText, TrendingUp, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
-// Mock data: 4 demo (3 hợp lệ, 1 thiếu biên bản)
-const INITIAL_DEMOS = [
-  {
-    id: 1,
-    opportunityName: 'Hệ thống ERP cho ABC Corp',
-    customer: 'Công ty ABC',
-    demoDate: '15/04/2026',
-    minutesLink: 'https://docs.google.com/document/d/demo1',
-    activityLog: 'Meeting scheduled via HubSpot',
-    missingActivity: false,
-    missingMinutes: false,
-    isValid: true,
-  },
-  {
-    id: 2,
-    opportunityName: 'Phần mềm CRM cho XYZ Ltd',
-    customer: 'XYZ Ltd',
-    demoDate: '18/04/2026',
-    minutesLink: 'https://docs.google.com/document/d/demo2',
-    activityLog: 'Demo call logged in CRM',
-    missingActivity: false,
-    missingMinutes: false,
-    isValid: true,
-  },
-  {
-    id: 3,
-    opportunityName: 'App quản lý kho cho MNO Inc',
-    customer: 'MNO Inc',
-    demoDate: '20/04/2026',
-    minutesLink: null,
-    activityLog: 'Demo completed',
-    missingActivity: false,
-    missingMinutes: true,
-    isValid: false,
-  },
-  {
-    id: 4,
-    opportunityName: 'Platform e-commerce cho PQR',
-    customer: 'PQR Group',
-    demoDate: '22/04/2026',
-    minutesLink: 'https://docs.google.com/document/d/demo4',
-    activityLog: 'Demo + follow-up logged',
-    missingActivity: false,
-    missingMinutes: false,
-    isValid: true,
-  },
-];
-
-// Mock data: 4 hợp đồng (2 đã thu đủ, 1 chưa thu, 1 thiếu chứng từ)
-const INITIAL_CONTRACTS = [
-  {
-    id: 1,
-    code: 'HD-2026-001',
-    customer: 'Công ty ABC',
-    contractAmount: 500000000,
-    fund: 50000000,
-    paidAmount: 15500000,
-    document: 'https://docs.google.com/document/d/ct1',
-    status: 'paid',
-  },
-  {
-    id: 2,
-    code: 'HD-2026-002',
-    customer: 'XYZ Ltd',
-    contractAmount: 300000000,
-    fund: 30000000,
-    paidAmount: 9300000,
-    document: 'https://docs.google.com/document/d/ct2',
-    status: 'paid',
-  },
-  {
-    id: 3,
-    code: 'HD-2026-003',
-    customer: 'PQR Group',
-    contractAmount: 200000000,
-    fund: 20000000,
-    paidAmount: 0,
-    document: 'https://docs.google.com/document/d/ct3',
-    status: 'signed',
-  },
-  {
-    id: 4,
-    code: 'HD-2026-004',
-    customer: 'MNO Inc',
-    contractAmount: 150000000,
-    fund: 15000000,
-    paidAmount: 4650000,
-    document: null,
-    status: 'missing_docs',
-  },
-];
+import { supabase } from '../../lib/supabaseClient';
 
 const SUB_TABS = [
   { id: 'demo', label: 'Demo', icon: LayoutGrid },
   { id: 'contract', label: 'Hợp đồng & Doanh số', icon: FileText },
 ];
 
-export default function SalePage() {
+const parseDateToDB = (dateStr) => {
+  if (!dateStr) return null;
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+  }
+  return dateStr;
+};
+
+const formatDateToUI = (dateStr) => {
+  if (!dateStr) return '';
+  const cleanDate = dateStr.substring(0, 10);
+  const parts = cleanDate.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
+
+export default function SalePage({ onTabChange }) {
   const [activeSubTab, setActiveSubTab] = useState('demo');
-  const [demos, setDemos] = useState(INITIAL_DEMOS);
+  const [demos, setDemos] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [leads, setLeads] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDemo, setEditingDemo] = useState(null);
 
-  const handleSaveDemo = (formData) => {
-    if (editingDemo) {
-      setDemos(demos.map(d => d.id === editingDemo.id ? { ...d, ...formData } : d));
-    } else {
-      const newDemo = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...formData,
-      };
-      setDemos([newDemo, ...demos]);
+  const fetchLeads = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, ho_ten, so_dien_thoai')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLeads(data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách leads:', err);
     }
-    setIsModalOpen(false);
-    setEditingDemo(null);
   };
 
-  const handleDeleteDemo = (id) => {
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_id, full_name, role')
+        .order('full_name', { ascending: true });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách nhân sự:', err);
+    }
+  };
+
+  const fetchDemos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('opportunities')
+        .select('*, users:sale_phu_trach(user_id, full_name)')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mappedDemos = (data || []).map((o) => {
+        const missingActivity = !o.ghi_chu || !o.ghi_chu.trim();
+        const missingMinutes = !o.link_bien_ban || !o.link_bien_ban.trim();
+        const isValid = !missingActivity && !missingMinutes;
+
+        return {
+          id: o.id,
+          opportunityName: o.ten_co_hoi || '',
+          customer: o.ten_khach || '',
+          leadId: o.lead_id || '',
+          demoDate: formatDateToUI(o.ngay_demo),
+          minutesLink: o.link_bien_ban || '',
+          activityLog: o.ghi_chu || '',
+          missingActivity,
+          missingMinutes,
+          isValid,
+          assignedRepId: o.sale_phu_trach || '',
+          assignedRepName: o.users ? o.users.full_name : '',
+        };
+      });
+
+      setDemos(mappedDemos);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách demo:', err);
+    }
+  };
+
+  const fetchContracts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mappedContracts = (data || []).map((c) => {
+        const status = !c.chung_tu_url
+          ? 'missing_docs'
+          : c.trang_thai === 'paid'
+          ? 'paid'
+          : 'signed';
+
+        const paidAmount = c.thu_nhap_sale !== null && c.thu_nhap_sale !== undefined
+          ? Number(c.thu_nhap_sale)
+          : (c.trang_thai === 'paid' ? Math.round(Number(c.quy_chia || 0) * 0.31) : 0);
+
+        return {
+          id: c.id,
+          code: c.ma_hop_dong || '',
+          customer: c.ten_khach || '',
+          contractAmount: Number(c.doanh_thu) || 0,
+          fund: Number(c.quy_chia) || 0,
+          paidAmount,
+          document: c.chung_tu_url || '',
+          status,
+        };
+      });
+
+      setContracts(mappedContracts);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách hợp đồng:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDemos();
+    fetchContracts();
+    fetchUsers();
+    fetchLeads();
+  }, []);
+
+  const handleSaveDemo = async (formData) => {
+    try {
+      const dbDate = parseDateToDB(formData.demoDate);
+      const thu_nhap_demo = formData.isValid ? 50000 : 0;
+
+      if (editingDemo) {
+        const { error } = await supabase
+          .from('opportunities')
+          .update({
+            ten_co_hoi: formData.opportunityName,
+            ten_khach: formData.customer,
+            lead_id: formData.leadId || null,
+            ngay_demo: dbDate,
+            link_bien_ban: formData.minutesLink || null,
+            ghi_chu: formData.activityLog || null,
+            thu_nhap_demo,
+            sale_phu_trach: formData.salePhuTrach || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingDemo.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('opportunities')
+          .insert([{
+            ten_co_hoi: formData.opportunityName,
+            ten_khach: formData.customer,
+            lead_id: formData.leadId || null,
+            ngay_demo: dbDate,
+            link_bien_ban: formData.minutesLink || null,
+            ghi_chu: formData.activityLog || null,
+            thu_nhap_demo,
+            sale_phu_trach: formData.salePhuTrach || null,
+            giai_doan: 'demo',
+          }]);
+
+        if (error) throw error;
+      }
+
+      setIsModalOpen(false);
+      setEditingDemo(null);
+      await fetchDemos();
+    } catch (err) {
+      console.error('Lỗi khi lưu demo:', err);
+      alert('Lỗi khi lưu demo: ' + err.message);
+    }
+  };
+
+  const handleDeleteDemo = async (id) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa Demo này không?')) {
-      setDemos(demos.filter(d => d.id !== id));
+      try {
+        const { error } = await supabase
+          .from('opportunities')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        await fetchDemos();
+      } catch (err) {
+        console.error('Lỗi khi xóa demo:', err);
+        alert('Lỗi khi xóa demo: ' + err.message);
+      }
     }
   };
 
@@ -199,9 +286,22 @@ export default function SalePage() {
             demos={demos} 
             onEdit={handleEditDemo}
             onDelete={handleDeleteDemo}
+            onQuote={(demo) => {
+              // Truyền đầy đủ context để BaoGia page biết đang báo giá cho ai
+              localStorage.setItem('baogia_context', JSON.stringify({
+                opportunity_id: demo.id,
+                lead_id: demo.leadId || null,
+                sale_id: demo.assignedRepId || null,
+                ten_khach: demo.customer,
+                ten_sale: demo.assignedRepName || 'Chưa rõ',
+              }));
+              if (onTabChange) {
+                onTabChange('BaoGia');
+              }
+            }}
           />
         ) : (
-          <ContractTable contracts={INITIAL_CONTRACTS} />
+          <ContractTable contracts={contracts} />
         )}
       </div>
 
@@ -210,6 +310,8 @@ export default function SalePage() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveDemo}
         demo={editingDemo}
+        users={users}
+        leads={leads}
       />
     </div>
   );

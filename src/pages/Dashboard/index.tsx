@@ -6,7 +6,31 @@ import { useProject } from '../../context/ProjectContext';
 import { ChevronDown } from 'lucide-react';
 
 const Dashboard = () => {
-  const { projects, selectedProject, setSelectedProjectId } = useProject();
+  const { projects, selectedProject, setSelectedProjectId, loading, error } = useProject();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-slate-500">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-sm font-semibold">Đang tải dữ liệu từ Supabase...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl max-w-2xl mx-auto my-8">
+        <h3 className="font-bold text-lg mb-2">Đã xảy ra lỗi kết nối Supabase</h3>
+        <p className="text-sm mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

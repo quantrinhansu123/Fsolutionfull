@@ -1,16 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 export const LeadFormModal = ({ isOpen, lead, onClose, onSubmit, mode = 'add' }) => {
-  const [formData, setFormData] = useState(
-    lead || {
-      name: '',
-      phone: '',
-      source: '',
-      image: '',
-      status: 'qualified',
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    source: '',
+    image: '',
+    status: 'qualified',
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(
+        lead || {
+          name: '',
+          phone: '',
+          source: '',
+          image: '',
+          status: 'qualified',
+        }
+      );
     }
-  );
+  }, [lead, isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -121,6 +133,9 @@ export const LeadFormModal = ({ isOpen, lead, onClose, onSubmit, mode = 'add' })
               <option value="Instagram">Instagram</option>
               <option value="Zalo">Zalo</option>
               <option value="Trực tiếp">Trực tiếp</option>
+              {formData.source && !['Facebook Ads', 'Google Ads', 'TikTok', 'Instagram', 'Zalo', 'Trực tiếp'].includes(formData.source) && (
+                <option value={formData.source}>{formData.source}</option>
+              )}
             </select>
           </div>
 

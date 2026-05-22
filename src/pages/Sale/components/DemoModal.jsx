@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Calendar, User, Link, FileText } from 'lucide-react';
+import { X, Save, Calendar, User, Link, FileText, ChevronDown } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
-export const DemoModal = ({ isOpen, onClose, onSave, demo }) => {
+export const DemoModal = ({ isOpen, onClose, onSave, demo, users = [], leads = [] }) => {
   const [formData, setFormData] = useState({
     opportunityName: '',
     customer: '',
+    leadId: '',
     demoDate: '',
     minutesLink: '',
     activityLog: '',
+    salePhuTrach: '',
     missingActivity: false,
     missingMinutes: false,
   });
@@ -18,9 +20,11 @@ export const DemoModal = ({ isOpen, onClose, onSave, demo }) => {
       setFormData({
         opportunityName: demo.opportunityName,
         customer: demo.customer,
+        leadId: demo.leadId || '',
         demoDate: demo.demoDate,
         minutesLink: demo.minutesLink || '',
         activityLog: demo.activityLog || '',
+        salePhuTrach: demo.assignedRepId || '',
         missingActivity: demo.missingActivity,
         missingMinutes: demo.missingMinutes,
       });
@@ -28,9 +32,11 @@ export const DemoModal = ({ isOpen, onClose, onSave, demo }) => {
       setFormData({
         opportunityName: '',
         customer: '',
+        leadId: '',
         demoDate: new Date().toLocaleDateString('vi-VN'),
         minutesLink: '',
         activityLog: '',
+        salePhuTrach: '',
         missingActivity: false,
         missingMinutes: false,
       });
@@ -47,6 +53,16 @@ export const DemoModal = ({ isOpen, onClose, onSave, demo }) => {
     });
   };
 
+  const handleLeadChange = (e) => {
+    const selectedLeadId = e.target.value;
+    const selectedLead = leads.find(l => l.id === selectedLeadId);
+    setFormData({
+      ...formData,
+      leadId: selectedLeadId,
+      customer: selectedLead ? selectedLead.ho_ten || selectedLead.so_dien_thoai : ''
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
@@ -54,7 +70,7 @@ export const DemoModal = ({ isOpen, onClose, onSave, demo }) => {
           <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
             {demo ? 'Cập nhật Demo' : 'Thêm Demo mới'}
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-all">
+          <button type="button" onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-all">
             <X size={20} />
           </button>
         </div>
@@ -79,18 +95,27 @@ export const DemoModal = ({ isOpen, onClose, onSave, demo }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Khách hàng *</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Khách hàng (Lead) *</label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                   <User size={16} />
                 </div>
-                <input 
-                  type="text" 
+                <select 
                   required
-                  value={formData.customer}
-                  onChange={(e) => setFormData({...formData, customer: e.target.value})}
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
-                />
+                  value={formData.leadId}
+                  onChange={handleLeadChange}
+                  className="w-full pl-12 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">-- Chọn khách hàng --</option>
+                  {leads.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.ho_ten || l.so_dien_thoai || 'Chưa cập nhật tên'}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <ChevronDown size={16} />
+                </div>
               </div>
             </div>
             <div>
@@ -107,6 +132,30 @@ export const DemoModal = ({ isOpen, onClose, onSave, demo }) => {
                   placeholder="DD/MM/YYYY"
                   className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                 />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nhân sự phụ trách</label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <User size={16} />
+              </div>
+              <select 
+                value={formData.salePhuTrach}
+                onChange={(e) => setFormData({...formData, salePhuTrach: e.target.value})}
+                className="w-full pl-12 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="">-- Chọn nhân sự phụ trách --</option>
+                {users.map((u) => (
+                  <option key={u.user_id} value={u.user_id}>
+                    {u.full_name} ({u.role})
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <ChevronDown size={16} />
               </div>
             </div>
           </div>

@@ -3,23 +3,25 @@ import { XCircle, CheckCircle2, User, Hash, MoreHorizontal, Edit2, Trash2, Chevr
 import { cn } from '../../../lib/utils';
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('vi-VN', { 
-    style: 'currency', 
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
     currency: 'VND',
     maximumFractionDigits: 0
   }).format(value);
 };
 
 export interface Ticket {
-  id: string;
-  name: string;
-  type: string;
-  point: number;
-  status: string;
-  reopen: number;
-  isBugByDev: boolean;
-  developedBy: string;
-  projectId?: string;
+  id: string;          // UUID trong DB (dùng cho CRUD)
+  ma_ticket: string;   // Mã ticket hiển thị vd "TK-4088"
+  name: string;        // tieu_de
+  type: string;        // label tiếng Việt (đã convert từ loai)
+  point: number;       // diem
+  status: string;      // trang_thai
+  reopen: number;      // so_lan_reopen
+  isBugByDev: boolean; // bug_do_dev
+  developedBy: string; // full_name của users!phu_trach
+  phu_trach: string;   // UUID của users (để edit modal)
+  projectId?: string;  // project_id
 }
 
 interface DevTicketTableProps {
@@ -31,6 +33,26 @@ interface DevTicketTableProps {
 
 export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: DevTicketTableProps) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  if (!tickets || tickets.length === 0) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+        <div className="p-8 border-b border-slate-100/80 bg-slate-50/30">
+          <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Danh sách Ticket Dev</h3>
+          <p className="text-sm text-slate-500 mt-1 font-medium">Chi tiết thực hiện và điểm thưởng theo từng ticket</p>
+        </div>
+        <div className="p-20 text-center flex flex-col items-center justify-center space-y-4">
+          <div className="w-16 h-16 bg-slate-50 border border-slate-100 text-slate-400 rounded-2xl flex items-center justify-center">
+            <Hash size={32} />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-bold text-slate-800 text-base">Không tìm thấy Ticket Dev nào</h3>
+            <p className="text-sm text-slate-400">Dự án hiện tại chưa có ticket phát triển nào được khởi tạo.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
@@ -71,18 +93,18 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
               const income = isInvalid ? 0 : ticket.point * pricePerPoint;
 
               return (
-                <tr 
-                  key={ticket.id} 
+                <tr
+                  key={ticket.id}
                   className={cn(
-                    "group transition-all duration-200",
-                    isInvalid ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-slate-50/80"
+                    'group transition-all duration-200',
+                    isInvalid ? 'bg-red-50/30 hover:bg-red-50/50' : 'hover:bg-slate-50/80'
                   )}
                 >
                   <td className="pl-8 pr-4 py-5">
                     <div className="flex items-center gap-2">
                       <Hash size={14} className="text-slate-300" />
                       <span className="text-sm font-mono font-bold text-slate-400 group-hover:text-slate-600 transition-colors">
-                        {ticket.id}
+                        {ticket.ma_ticket}
                       </span>
                     </div>
                   </td>
@@ -91,15 +113,12 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
                       <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
                         <User size={14} />
                       </div>
-                      <span className="text-sm font-bold text-slate-700">{ticket.developedBy}</span>
+                      <span className="text-sm font-bold text-slate-700">{ticket.developedBy || 'Chưa phân công'}</span>
                     </div>
                   </td>
                   <td className="px-4 py-5">
                     <div className="max-w-[250px]">
-                      <p className={cn(
-                        "text-sm font-bold transition-all line-clamp-1",
-                        isInvalid ? "text-slate-400 line-through" : "text-slate-800"
-                      )}>
+                      <p className={cn('text-sm font-bold transition-all line-clamp-1', isInvalid ? 'text-slate-400 line-through' : 'text-slate-800')}>
                         {ticket.name}
                       </p>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{ticket.type}</span>
@@ -116,8 +135,8 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
                   <td className="px-4 py-5 text-center">
                     <div className="flex flex-col items-center">
                       <span className={cn(
-                        "text-sm font-black tabular-nums",
-                        ticket.reopen > 1 ? "text-red-500" : ticket.reopen > 0 ? "text-orange-500" : "text-slate-400"
+                        'text-sm font-black tabular-nums',
+                        ticket.reopen > 1 ? 'text-red-500' : ticket.reopen > 0 ? 'text-orange-500' : 'text-slate-400'
                       )}>
                         {ticket.reopen}
                       </span>
@@ -128,10 +147,7 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
                   </td>
                   <td className="px-4 py-5 text-right">
                     <div className="flex items-center justify-end gap-2.5">
-                      <span className={cn(
-                        "text-sm font-black tabular-nums tracking-tight",
-                        isInvalid ? "text-slate-300" : "text-emerald-600"
-                      )}>
+                      <span className={cn('text-sm font-black tabular-nums tracking-tight', isInvalid ? 'text-slate-300' : 'text-emerald-600')}>
                         {formatCurrency(income)}
                       </span>
                       {isInvalid ? (
@@ -143,11 +159,11 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
                   </td>
                   <td className="pl-4 pr-8 py-5 text-center">
                     <div className="relative inline-block">
-                      <button 
+                      <button
                         onClick={() => setActiveMenu(activeMenu === ticket.id ? null : ticket.id)}
                         className={cn(
-                          "p-2 rounded-xl text-slate-400 hover:text-slate-600 transition-all",
-                          activeMenu === ticket.id ? "bg-slate-100" : "hover:bg-slate-100"
+                          'p-2 rounded-xl text-slate-400 hover:text-slate-600 transition-all',
+                          activeMenu === ticket.id ? 'bg-slate-100' : 'hover:bg-slate-100'
                         )}
                       >
                         <MoreHorizontal size={18} />
@@ -156,11 +172,8 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
                           <div className="absolute right-0 top-full mt-2 w-40 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-2 duration-200 text-left">
-                            <button 
-                              onClick={() => {
-                                onEdit(ticket);
-                                setActiveMenu(null);
-                              }}
+                            <button
+                              onClick={() => { onEdit(ticket); setActiveMenu(null); }}
                               className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-black text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-colors group/item"
                             >
                               <div className="flex items-center gap-2">
@@ -169,11 +182,8 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
                               </div>
                               <ChevronRight size={12} className="opacity-0 group-hover/item:opacity-100 transition-opacity" />
                             </button>
-                            <button 
-                              onClick={() => {
-                                onDelete(ticket.id);
-                                setActiveMenu(null);
-                              }}
+                            <button
+                              onClick={() => { onDelete(ticket.id); setActiveMenu(null); }}
                               className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-black text-red-500 hover:bg-red-50 rounded-xl transition-colors group/item"
                             >
                               <div className="flex items-center gap-2">

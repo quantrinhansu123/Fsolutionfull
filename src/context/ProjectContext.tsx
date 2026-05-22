@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useMemo } from 'react';
+import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 export interface Project {
   id: string;
@@ -12,38 +13,89 @@ interface ProjectContextType {
   selectedProject: Project;
   setSelectedProjectId: (id: string) => void;
   isAllProjects: boolean;
+  loading: boolean;
+  error: string | null;
+  refreshProjects: () => Promise<void>;
 }
-
-const mockProjects: Project[] = [
-  { id: '1', name: 'Dự án A', revenue: 20000000, amc: 1000000 },
-  { id: '2', name: 'Dự án B', revenue: 35000000, amc: 2000000 },
-];
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { data, error: fetchError } = await supabase
+        .from('projects')
+        .select(`
+          project_id,
+          name,
+          pricing,
+          amc_payments (
+            tong_amc
+          )
+        `);
+
+      if (fetchError) throw fetchError;
+
+      if (data) {
+        const mappedProjects: Project[] = data.map((p: any) => {
+          const totalAmc = p.amc_payments?.reduce(
+            (sum: number, amcItem: any) => sum + (Number(amcItem.tong_amc) || 0), 
+            0
+          ) || 0;
+
+          return {
+            id: p.project_id,
+            name: p.name || 'Dự án không tên',
+            revenue: Number(p.pricing) || 0,
+            amc: totalAmc
+          };
+        });
+
+        setProjects(mappedProjects);
+      }
+    } catch (err: any) {
+      console.error('Error fetching projects from Supabase:', err);
+      setError(err.message || 'Không thể tải danh sách dự án');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshProjects();
+  }, []);
 
   const allProjectsData = useMemo(() => {
     return {
       id: 'all',
       name: 'Tất cả dự án',
-      revenue: mockProjects.reduce((sum, p) => sum + p.revenue, 0),
-      amc: mockProjects.reduce((sum, p) => sum + p.amc, 0),
+      revenue: projects.reduce((sum, p) => sum + p.revenue, 0),
+      amc: projects.reduce((sum, p) => sum + p.amc, 0),
     };
-  }, []);
+  }, [projects]);
 
   const selectedProject = useMemo(() => {
     if (selectedProjectId === 'all') return allProjectsData;
-    return mockProjects.find(p => p.id === selectedProjectId) || allProjectsData;
-  }, [selectedProjectId, allProjectsData]);
+    return projects.find(p => p.id === selectedProjectId) || allProjectsData;
+  }, [selectedProjectId, projects, allProjectsData]);
 
   return (
     <ProjectContext.Provider value={{ 
-      projects: mockProjects, 
+      projects, 
       selectedProject, 
       setSelectedProjectId,
-      isAllProjects: selectedProjectId === 'all'
+      isAllProjects: selectedProjectId === 'all',
+      loading,
+      error,
+      refreshProjects
     }}>
       {children}
     </ProjectContext.Provider>
@@ -57,3 +109,4 @@ export const useProject = () => {
   }
   return context;
 };
+

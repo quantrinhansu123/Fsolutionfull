@@ -1,6 +1,7 @@
 import React from 'react';
 import { 
   LayoutDashboard,
+  Users,
   Megaphone, 
   Briefcase, 
   FileSearch, 
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const menuItems: MenuItem[] = [
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'Customers', label: 'Khách hàng', icon: Users },
     { id: 'Marketing', label: 'Marketing', icon: Megaphone, badge: 2 },
     { id: 'Sale', label: 'Sale', icon: Briefcase },
     { id: 'BaoGia', label: 'Báo giá', icon: FileText },
