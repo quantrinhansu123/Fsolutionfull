@@ -11,7 +11,7 @@ interface BaoGiaContext {
 
 export default function BaoGiaPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [ctx, setCtx] = useState<BaoGiaContext>({});
+
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -58,7 +58,7 @@ export default function BaoGiaPage() {
     // Đọc context Sale đã set khi bấm "Báo giá" từ bảng Demo
     const raw = localStorage.getItem('baogia_context');
     const context: BaoGiaContext = raw ? JSON.parse(raw) : {};
-    setCtx(context);
+
 
     // Lắng nghe message từ iframe
     const handleMessage = async (e: MessageEvent) => {
@@ -79,7 +79,7 @@ export default function BaoGiaPage() {
 
         setSaving(true);
         try {
-          const { total, payload, context: iframeCtx } = e.data;
+          const { total, payload } = e.data;
 
           // Tính lần báo giá tại thời điểm lưu (tránh race condition)
           const { count } = await supabase
