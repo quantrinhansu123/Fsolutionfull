@@ -1,4 +1,3 @@
-import React from 'react';
 import { useProject } from '../../../context/ProjectContext';
 import { Calculator, Wallet } from 'lucide-react';
 

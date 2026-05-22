@@ -1,4 +1,3 @@
-import React from 'react';
 import { useProject } from '../../../context/ProjectContext';
 import { TrendingUp, CreditCard, PieChart, Wallet } from 'lucide-react';
 import { cn } from '../../../lib/utils';

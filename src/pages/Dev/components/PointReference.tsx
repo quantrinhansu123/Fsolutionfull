@@ -1,4 +1,3 @@
-import React from 'react';
 import { Info, HelpCircle } from 'lucide-react';
 
 export const PointReference = () => {

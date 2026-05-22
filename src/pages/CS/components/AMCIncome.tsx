@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Calendar, AlertCircle, TrendingUp, Info } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -17,7 +17,7 @@ export const AMCIncome = () => {
     { id: 'year3', label: 'Năm 3' },
   ];
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('vi-VN', { 
       style: 'currency', 
       currency: 'VND',

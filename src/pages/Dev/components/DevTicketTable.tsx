@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { XCircle, CheckCircle2, User, Hash, MoreHorizontal, Edit2, Trash2, ChevronRight } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 

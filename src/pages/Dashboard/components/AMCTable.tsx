@@ -1,4 +1,3 @@
-import React from 'react';
 import { useProject } from '../../../context/ProjectContext';
 
 const formatCurrency = (value: number) => {

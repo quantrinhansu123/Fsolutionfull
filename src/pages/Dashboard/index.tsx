@@ -1,4 +1,3 @@
-import React from 'react';
 import { ProjectSummaryCards } from './components/ProjectSummaryCards';
 import { DistributionChart } from './components/DistributionChart';
 import { DepartmentTable } from './components/DepartmentTable';

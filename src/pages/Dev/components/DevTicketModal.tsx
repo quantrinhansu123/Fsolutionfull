@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { X, Save, Calculator, User, Hash, AlertTriangle, Bug } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import type { Ticket } from './DevTicketTable';
 
 const TICKET_TYPES = [
   { label: 'Module lớn', points: 8 },
@@ -10,7 +11,14 @@ const TICKET_TYPES = [
   { label: 'Bug nhỏ', points: 1 },
 ];
 
-export const DevTicketModal = ({ isOpen, onClose, onSave, ticket }) => {
+interface DevTicketModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (ticket: Ticket) => void;
+  ticket: Ticket | null;
+}
+
+export const DevTicketModal = ({ isOpen, onClose, onSave, ticket }: DevTicketModalProps) => {
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -39,7 +47,7 @@ export const DevTicketModal = ({ isOpen, onClose, onSave, ticket }) => {
     }
   }, [ticket, isOpen]);
 
-  const handleTypeChange = (type) => {
+  const handleTypeChange = (type: string) => {
     const selectedType = TICKET_TYPES.find(t => t.label === type);
     setFormData({
       ...formData,
@@ -50,7 +58,7 @@ export const DevTicketModal = ({ isOpen, onClose, onSave, ticket }) => {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSave(formData);
   };

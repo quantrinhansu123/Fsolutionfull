@@ -1,4 +1,3 @@
-import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useProject } from '../../../context/ProjectContext';
 
@@ -38,15 +37,16 @@ export const DistributionChart = () => {
             paddingAngle={5}
             dataKey="value"
           >
-            {data.map((entry, index) => (
+            {data.map((_, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip 
-            formatter={(value: number, name: string, props: any) => [
-              `${value}% (${formatCurrency(props.payload.amount)})`, 
-              name
-            ]}
+            formatter={(value, name, item) => {
+              const num = Number(value ?? 0);
+              const amount = (item?.payload as { amount?: number })?.amount ?? 0;
+              return [`${num}% (${formatCurrency(amount)})`, String(name ?? '')];
+            }}
           />
           <Legend layout="vertical" align="right" verticalAlign="middle" />
         </PieChart>

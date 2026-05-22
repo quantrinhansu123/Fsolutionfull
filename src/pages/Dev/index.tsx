@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DevTicketTable } from './components/DevTicketTable';
 import type { Ticket } from './components/DevTicketTable';
 import { DevSummary } from './components/DevSummary';

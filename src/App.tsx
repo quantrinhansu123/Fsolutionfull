@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Layout } from './components/layout/Layout';
 import { ProjectProvider } from './context/ProjectContext';
 import Dashboard from './pages/Dashboard';
-import BAPage from './pages/BA';
-import SalePage from './pages/Sale';
-import MarketingPage from './pages/Marketing';
-import CSPage from './pages/CS';
+import BAPage from './pages/BA/index.jsx';
+import SalePage from './pages/Sale/index.jsx';
+import MarketingPage from './pages/Marketing/index.jsx';
+import CSPage from './pages/CS/index.jsx';
 import DevPage from './pages/Dev';
-import SettingsPage from './pages/Settings';
+import SettingsPage from './pages/Settings/index.jsx';
 import BaoGiaPage from './pages/BaoGia';
 import LoginPage from './pages/Login';
 
