@@ -8,6 +8,7 @@ import MarketingPage from './pages/Marketing';
 import CSPage from './pages/CS';
 import DevPage from './pages/Dev';
 import SettingsPage from './pages/Settings';
+import BaoGiaPage from './pages/BaoGia';
 import LoginPage from './pages/Login';
 
 function App() {
@@ -26,6 +27,8 @@ function App() {
         return <BAPage />;
       case 'Sale':
         return <SalePage />;
+      case 'BaoGia':
+        return <BaoGiaPage />;
       case 'Marketing':
         return <MarketingPage />;
       case 'CS':
