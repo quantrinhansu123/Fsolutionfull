@@ -22,6 +22,7 @@ export interface Ticket {
   developedBy: string; // full_name của users!phu_trach
   phu_trach: string;   // UUID của users (để edit modal)
   projectId?: string;  // project_id
+  featureId?: string;  // feature_id trong schema tasks
 }
 
 interface DevTicketTableProps {

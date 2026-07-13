@@ -24,6 +24,32 @@ export default function DevPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
 
+  const getDevFeatureId = async (projectId: string) => {
+    const { data: existing, error: findError } = await supabase
+      .from('features')
+      .select('feature_id')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true })
+      .limit(1);
+
+    if (findError) throw findError;
+    if (existing && existing.length > 0) return existing[0].feature_id;
+
+    const { data: created, error: createError } = await supabase
+      .from('features')
+      .insert([{
+        project_id: projectId,
+        name: 'Dev',
+        status: 'active',
+        content_blocks: { source: 'flow-dev' },
+      }])
+      .select('feature_id')
+      .single();
+
+    if (createError) throw createError;
+    return created.feature_id;
+  };
+
   // ─── Fetch tỷ lệ bộ phận Dev từ income_rate_config ───────────────────────
   const fetchDevRate = async () => {
     try {
@@ -57,49 +83,60 @@ export default function DevPage() {
       setLoading(true);
       setError(null);
 
-      let query = supabase
-        .from('tickets')
-        .select(`
-          *,
-          users!phu_trach (
-            user_id,
-            full_name,
-            avatar_url,
-            role
-          ),
-          projects (
-            project_id,
-            name
-          )
-        `)
-        .eq('bo_phan', 'dev');
+      let featureQuery = supabase
+        .from('features')
+        .select('feature_id, project_id');
 
       if (selectedProject.id !== 'all') {
-        query = query.eq('project_id', selectedProject.id);
+        featureQuery = featureQuery.eq('project_id', selectedProject.id);
       }
 
-      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
+      const [{ data: features, error: featuresError }, { data: users, error: usersError }] = await Promise.all([
+        featureQuery,
+        supabase.from('users').select('user_id, full_name'),
+      ]);
+
+      if (featuresError) throw featuresError;
+      if (usersError) throw usersError;
+
+      const featureRows = features || [];
+      if (featureRows.length === 0) {
+        setTickets([]);
+        return;
+      }
+
+      const featureIds = featureRows.map((f: any) => f.feature_id);
+      const featureProjectMap = new Map(featureRows.map((f: any) => [f.feature_id, f.project_id]));
+      const userNameMap = new Map((users || []).map((u: any) => [u.user_id, u.full_name]));
+
+      const { data, error: fetchError } = await supabase
+        .from('tasks')
+        .select('*')
+        .in('feature_id', featureIds)
+        .is('parent_task_id', null)
+        .order('created_at', { ascending: false });
       if (fetchError) throw fetchError;
 
       if (data) {
         const mapped: Ticket[] = data.map((t: any) => {
-          // Convert loai DB code → label tiếng Việt
-          const typeInfo = TICKET_TYPE_MAP.find(tm => tm.dbCode === t.loai);
-          const typeLabel = typeInfo ? typeInfo.label : (t.loai || 'Không xác định');
-          const point = typeInfo ? typeInfo.points : (Number(t.diem) || 0);
+          const content = t.content_blocks || {};
+          const typeInfo = TICKET_TYPE_MAP.find(tm => tm.dbCode === content.dbLoai || tm.label === content.type);
+          const typeLabel = typeInfo ? typeInfo.label : (content.type || 'Không xác định');
+          const point = Number(content.point ?? typeInfo?.points ?? 0);
 
           return {
-            id: t.id,
-            ma_ticket: t.ma_ticket || '',
-            name: t.tieu_de || '',
+            id: t.task_id,
+            ma_ticket: content.ma_task || `TK-${String(t.task_id).slice(0, 4).toUpperCase()}`,
+            name: t.name || '',
             type: typeLabel,
             point,
-            status: t.trang_thai || 'done',
-            reopen: Number(t.so_lan_reopen) || 0,
-            isBugByDev: !!t.bug_do_dev,
-            developedBy: t.users?.full_name || 'Chưa phân công',
-            phu_trach: t.phu_trach || '',
-            projectId: t.project_id || '',
+            status: t.status || 'done',
+            reopen: Number(content.reopen) || 0,
+            isBugByDev: !!content.isBugByDev,
+            developedBy: userNameMap.get(t.assigned_to) || 'Chưa phân công',
+            phu_trach: t.assigned_to || '',
+            projectId: featureProjectMap.get(t.feature_id) || '',
+            featureId: t.feature_id || '',
           };
         });
         setTickets(mapped);
@@ -124,45 +161,50 @@ export default function DevPage() {
       const typeInfo = TICKET_TYPE_MAP.find(t => t.label === formData.type || t.dbCode === formData.dbLoai);
       const diem = typeInfo ? typeInfo.points : formData.point || 0;
       const loai = typeInfo ? typeInfo.dbCode : formData.dbLoai || null;
+      const projectId = formData.projectId || selectedProject.id;
+
+      if (!projectId || projectId === 'all') {
+        alert('Vui lòng chọn dự án trước khi lưu task.');
+        return;
+      }
+
+      const featureId = await getDevFeatureId(projectId);
+      const taskContent = {
+        source: 'flow-dev',
+        ma_task: formData.ma_ticket || `TK-${Math.floor(1000 + Math.random() * 9000)}`,
+        type: formData.type,
+        dbLoai: loai,
+        point: diem,
+        reopen: formData.reopen || 0,
+        isBugByDev: !!formData.isBugByDev,
+        department: 'dev',
+      };
 
       if (editingTicket) {
         // Cập nhật task
         const { error: updateError } = await supabase
-          .from('tickets')
+          .from('tasks')
           .update({
-            tieu_de: formData.name,
-            loai,
-            diem,
-            so_lan_reopen: formData.reopen || 0,
-            bug_do_dev: !!formData.isBugByDev,
-            phu_trach: formData.phu_trach || null,
-            project_id: formData.projectId || null,
+            name: formData.name,
+            feature_id: featureId,
+            assigned_to: formData.phu_trach || null,
+            status: 'done',
+            content_blocks: taskContent,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', editingTicket.id);
+          .eq('task_id', editingTicket.id);
 
         if (updateError) throw updateError;
       } else {
         // Thêm mới task
         const { error: insertError } = await supabase
-          .from('tickets')
+          .from('tasks')
           .insert([{
-            ma_ticket: formData.ma_ticket || `TK-${Math.floor(1000 + Math.random() * 9000)}`,
-            tieu_de: formData.name,
-            loai,
-            diem,
-            bo_phan: 'dev',
-            trang_thai: 'done',
-            so_lan_reopen: formData.reopen || 0,
-            bug_do_dev: !!formData.isBugByDev,
-            phu_trach: formData.phu_trach || null,
-            project_id: formData.projectId || null,
-            hop_le: false,
-            co_tai_lieu: false,
-            khach_xac_nhan: false,
-            loi_sau_trien_khai: false,
-            thu_nhap: 0,
-            do_uu_tien: 'medium',
+            feature_id: featureId,
+            name: formData.name,
+            assigned_to: formData.phu_trach || null,
+            status: 'done',
+            content_blocks: taskContent,
           }]);
 
         if (insertError) throw insertError;
@@ -181,9 +223,9 @@ export default function DevPage() {
     if (!window.confirm('Bạn có chắc chắn muốn xóa Task này không?')) return;
     try {
       const { error: deleteError } = await supabase
-        .from('tickets')
+        .from('tasks')
         .delete()
-        .eq('id', id);
+        .eq('task_id', id);
 
       if (deleteError) throw deleteError;
       fetchTickets();
