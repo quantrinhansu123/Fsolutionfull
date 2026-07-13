@@ -119,7 +119,7 @@ export const DevTicketModal = ({ isOpen, onClose, onSave, ticket, projects }: De
               <Calculator size={20} />
             </div>
             <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
-              {ticket ? 'Cập nhật Ticket Dev' : 'Thêm Ticket Dev mới'}
+              {ticket ? 'Cập nhật Task Dev' : 'Thêm Task Dev mới'}
             </h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-all">
@@ -128,10 +128,10 @@ export const DevTicketModal = ({ isOpen, onClose, onSave, ticket, projects }: De
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          {/* Row 1: Mã Ticket & Loại Ticket */}
+          {/* Row 1: Mã Task & Loại Task */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Mã Ticket</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Mã Task</label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                   <Hash size={16} />
@@ -146,7 +146,7 @@ export const DevTicketModal = ({ isOpen, onClose, onSave, ticket, projects }: De
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Loại Ticket *</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Loại Task *</label>
               <select
                 value={formData.type}
                 onChange={(e) => handleTypeChange(e.target.value)}
@@ -159,9 +159,9 @@ export const DevTicketModal = ({ isOpen, onClose, onSave, ticket, projects }: De
             </div>
           </div>
 
-          {/* Tên Ticket */}
+          {/* Tên Task */}
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tên Ticket / Tính năng *</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tên Task / Tính năng *</label>
             <input
               type="text"
               required
@@ -257,7 +257,7 @@ export const DevTicketModal = ({ isOpen, onClose, onSave, ticket, projects }: De
           <div className="p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50 flex items-start gap-3">
             <AlertTriangle size={16} className="text-orange-600 mt-0.5 shrink-0" />
             <p className="text-[11px] font-bold text-orange-700/80 leading-relaxed italic">
-              Ticket có số lần Reopen {'>'} 1 hoặc bị đánh dấu là "Lỗi chủ quan" sẽ không được tính thu nhập.
+              Task có số lần Reopen {'>'} 1 hoặc bị đánh dấu là "Lỗi chủ quan" sẽ không được tính thu nhập.
             </p>
           </div>
 
@@ -275,7 +275,7 @@ export const DevTicketModal = ({ isOpen, onClose, onSave, ticket, projects }: De
               className="flex-2 px-6 py-4 bg-slate-900 text-white rounded-2xl text-sm font-black hover:bg-blue-600 shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"
             >
               <Save size={20} />
-              Lưu Ticket Dev
+              Lưu Task Dev
             </button>
           </div>
         </form>

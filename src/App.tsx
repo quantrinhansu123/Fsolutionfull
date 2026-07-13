@@ -8,6 +8,7 @@ import SalePage from './pages/Sale/index.jsx';
 import MarketingPage from './pages/Marketing/index.jsx';
 import CSPage from './pages/CS/index.jsx';
 import DevPage from './pages/Dev';
+import TaskPage from './pages/Task';
 import SettingsPage from './pages/Settings/index.jsx';
 import BaoGiaPage from './pages/BaoGia';
 import LoginPage from './pages/Login';
@@ -37,6 +38,8 @@ function App() {
         return <MarketingPage />;
       case 'CS':
         return <CSPage />;
+      case 'Task':
+        return <TaskPage />;
       case 'Dev':
         return <DevPage />;
       case 'Settings':

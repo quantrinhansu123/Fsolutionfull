@@ -16,7 +16,13 @@ export default function MarketingPage() {
     try {
       const { data, error } = await supabase
         .from('leads')
-        .select('*')
+        .select(`
+          *,
+          users!phu_trach (
+            user_id,
+            full_name
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -31,12 +37,14 @@ export default function MarketingPage() {
 
         return {
           id: l.id, // UUID
-          name: l.ho_ten || '',
-          phone: l.so_dien_thoai || '',
-          source: l.source_id || l.nguon || '',
-          image: l.anh_nhu_cau_url || '',
-          status: l.trang_thai === 'qualified' ? 'qualified' : 'disqualified',
+          name: l.ho_ten || l.customer_name || '',
+          phone: l.so_dien_thoai || l.customer_phone || '',
+          source: l.source_id || l.nguon || l.lead_source || l.platform || '',
+          image: l.anh_nhu_cau_url || l.comment_url || l.post_url || '',
+          status: (l.trang_thai === 'qualified' || l.hop_le === true) ? 'qualified' : 'disqualified',
           income: Number(l.thu_nhap) || 0,
+          handler: l.users?.full_name || l.created_by_staff_name || 'Chưa có người xử lý',
+          handlerId: l.phu_trach || l.created_by_staff_id || '',
           warnings,
         };
       });
@@ -79,6 +87,11 @@ export default function MarketingPage() {
         const { error } = await supabase
           .from('leads')
           .insert([{
+            lead_key: `flow-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            platform: 'flow',
+            lead_source: nguon,
+            customer_name: formData.name,
+            customer_phone: formData.phone,
             ho_ten: formData.name,
             so_dien_thoai: formData.phone,
             nguon,
@@ -95,6 +108,9 @@ export default function MarketingPage() {
         const { error } = await supabase
           .from('leads')
           .update({
+            customer_name: formData.name,
+            customer_phone: formData.phone,
+            lead_source: nguon,
             ho_ten: formData.name,
             so_dien_thoai: formData.phone,
             nguon,

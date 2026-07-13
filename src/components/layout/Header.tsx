@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab }) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
           <input
             type="text"
-            placeholder="Search Projects / Tickets..."
+            placeholder="Search Projects / Tasks..."
             className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 focus:outline-none focus:border-blue-600 focus:bg-white transition-all text-slate-900 text-sm rounded-lg"
           />
         </div>

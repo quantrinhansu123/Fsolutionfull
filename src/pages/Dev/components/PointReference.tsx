@@ -28,7 +28,7 @@ export const PointReference = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Loại ticket</th>
+                <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Loại task</th>
                 <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-right">Giá trị Point</th>
               </tr>
             </thead>

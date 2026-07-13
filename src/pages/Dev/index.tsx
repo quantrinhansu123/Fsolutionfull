@@ -51,7 +51,7 @@ export default function DevPage() {
     }
   };
 
-  // ─── Fetch danh sách ticket Dev từ Supabase ───────────────────────────────
+  // ─── Fetch danh sách task Dev từ Supabase ─────────────────────────────────
   const fetchTickets = async () => {
     try {
       setLoading(true);
@@ -106,7 +106,7 @@ export default function DevPage() {
       }
     } catch (err: any) {
       console.error('Error fetching Dev tickets:', err);
-      setError(err.message || 'Không thể đồng bộ dữ liệu ticket Dev từ Supabase.');
+      setError(err.message || 'Không thể đồng bộ dữ liệu task Dev từ Supabase.');
     } finally {
       setLoading(false);
     }
@@ -126,7 +126,7 @@ export default function DevPage() {
       const loai = typeInfo ? typeInfo.dbCode : formData.dbLoai || null;
 
       if (editingTicket) {
-        // Cập nhật ticket
+        // Cập nhật task
         const { error: updateError } = await supabase
           .from('tickets')
           .update({
@@ -143,7 +143,7 @@ export default function DevPage() {
 
         if (updateError) throw updateError;
       } else {
-        // Thêm mới ticket
+        // Thêm mới task
         const { error: insertError } = await supabase
           .from('tickets')
           .insert([{
@@ -173,12 +173,12 @@ export default function DevPage() {
       fetchTickets();
     } catch (err: any) {
       console.error('Error saving Dev ticket:', err);
-      alert('Lỗi khi lưu ticket: ' + err.message);
+      alert('Lỗi khi lưu task: ' + err.message);
     }
   };
 
   const handleDeleteTicket = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa Ticket này không?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa Task này không?')) return;
     try {
       const { error: deleteError } = await supabase
         .from('tickets')
@@ -189,7 +189,7 @@ export default function DevPage() {
       fetchTickets();
     } catch (err: any) {
       console.error('Error deleting Dev ticket:', err);
-      alert('Lỗi khi xóa ticket: ' + err.message);
+      alert('Lỗi khi xóa task: ' + err.message);
     }
   };
 
@@ -290,7 +290,7 @@ export default function DevPage() {
             className="flex items-center gap-2 px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-600 shadow-xl shadow-slate-900/10 hover:shadow-blue-600/20 transition-all transform hover:-translate-y-1 active:translate-y-0"
           >
             <Plus size={20} />
-            <span>Thêm Ticket Dev</span>
+            <span>Thêm Task Dev</span>
           </button>
         </div>
       </div>
@@ -299,7 +299,7 @@ export default function DevPage() {
       {loading ? (
         <div className="bg-white rounded-3xl border border-slate-200/60 p-20 flex flex-col items-center justify-center text-slate-400 space-y-4">
           <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-slate-500">Đang đồng bộ dữ liệu ticket Dev từ Supabase...</p>
+          <p className="text-sm font-semibold text-slate-500">Đang đồng bộ dữ liệu task Dev từ Supabase...</p>
         </div>
       ) : error ? (
         <div className="bg-white rounded-3xl border border-slate-200/60 p-12 max-w-xl mx-auto text-center space-y-4">
@@ -307,7 +307,7 @@ export default function DevPage() {
             <AlertTriangle size={24} />
           </div>
           <div className="space-y-1">
-            <h3 className="font-bold text-slate-800 text-lg">Không thể tải dữ liệu ticket Dev</h3>
+            <h3 className="font-bold text-slate-800 text-lg">Không thể tải dữ liệu task Dev</h3>
             <p className="text-sm text-red-600 font-semibold">{error}</p>
           </div>
           <button

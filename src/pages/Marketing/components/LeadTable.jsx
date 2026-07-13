@@ -56,6 +56,7 @@ export const LeadTable = ({ leads, onEdit, onDelete }) => {
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Tên khách</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">SĐT</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Source/Campaign</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Người xử lý</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Ảnh nhu cầu</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Trạng thái</th>
             <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Thu nhập</th>
@@ -88,6 +89,11 @@ export const LeadTable = ({ leads, onEdit, onDelete }) => {
                   {lead.phone || '-'}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700">{lead.source}</td>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  <span className={lead.handlerId ? 'font-medium text-gray-900' : 'text-gray-400'}>
+                    {lead.handler || 'Chưa có người xử lý'}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-sm text-center">
                   {lead.image ? (
                     <a

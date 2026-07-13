@@ -12,7 +12,7 @@ const formatCurrency = (value: number) => {
 
 export interface Ticket {
   id: string;          // UUID trong DB (dùng cho CRUD)
-  ma_ticket: string;   // Mã ticket hiển thị vd "TK-4088"
+  ma_ticket: string;   // Mã task hiển thị vd "TK-4088"
   name: string;        // tieu_de
   type: string;        // label tiếng Việt (đã convert từ loai)
   point: number;       // diem
@@ -38,16 +38,16 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
     return (
       <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
         <div className="p-8 border-b border-slate-100/80 bg-slate-50/30">
-          <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Danh sách Ticket Dev</h3>
-          <p className="text-sm text-slate-500 mt-1 font-medium">Chi tiết thực hiện và điểm thưởng theo từng ticket</p>
+          <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Danh sách Task Dev</h3>
+          <p className="text-sm text-slate-500 mt-1 font-medium">Chi tiết thực hiện và điểm thưởng theo từng task</p>
         </div>
         <div className="p-20 text-center flex flex-col items-center justify-center space-y-4">
           <div className="w-16 h-16 bg-slate-50 border border-slate-100 text-slate-400 rounded-2xl flex items-center justify-center">
             <Hash size={32} />
           </div>
           <div className="space-y-1">
-            <h3 className="font-bold text-slate-800 text-base">Không tìm thấy Ticket Dev nào</h3>
-            <p className="text-sm text-slate-400">Dự án hiện tại chưa có ticket phát triển nào được khởi tạo.</p>
+            <h3 className="font-bold text-slate-800 text-base">Không tìm thấy Task Dev nào</h3>
+            <p className="text-sm text-slate-400">Dự án hiện tại chưa có task phát triển nào được khởi tạo.</p>
           </div>
         </div>
       </div>
@@ -58,8 +58,8 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
     <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
       <div className="p-8 border-b border-slate-100/80 bg-slate-50/30 flex justify-between items-center">
         <div>
-          <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Danh sách Ticket Dev</h3>
-          <p className="text-sm text-slate-500 mt-1 font-medium">Chi tiết thực hiện và điểm thưởng theo từng ticket</p>
+          <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Danh sách Task Dev</h3>
+          <p className="text-sm text-slate-500 mt-1 font-medium">Chi tiết thực hiện và điểm thưởng theo từng task</p>
         </div>
         <div className="flex gap-4">
           <div className="flex items-center gap-2">
@@ -77,9 +77,9 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
         <table className="w-full text-left border-collapse min-w-[1100px]">
           <thead>
             <tr className="bg-slate-50/50">
-              <th className="pl-8 pr-4 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Mã Ticket</th>
+              <th className="pl-8 pr-4 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Mã Task</th>
               <th className="px-4 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Người thực hiện</th>
-              <th className="px-4 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Tên Ticket</th>
+              <th className="px-4 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Tên Task</th>
               <th className="px-4 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-right">Point</th>
               <th className="px-4 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-center">Trạng thái</th>
               <th className="px-4 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-center">Reopen</th>
@@ -188,7 +188,7 @@ export const DevTicketTable = ({ tickets, pricePerPoint, onEdit, onDelete }: Dev
                             >
                               <div className="flex items-center gap-2">
                                 <Trash2 size={14} />
-                                <span>Xóa Ticket</span>
+                                <span>Xóa Task</span>
                               </div>
                               <ChevronRight size={12} className="opacity-0 group-hover/item:opacity-100 transition-opacity" />
                             </button>
