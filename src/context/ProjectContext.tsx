@@ -33,29 +33,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       const { data, error: fetchError } = await supabase
         .from('projects')
-        .select(`
-          project_id,
-          name,
-          pricing,
-          amc_payments (
-            tong_amc
-          )
-        `);
+        .select('project_id,name,pricing');
 
       if (fetchError) throw fetchError;
 
       if (data) {
         const mappedProjects: Project[] = data.map((p: any) => {
-          const totalAmc = p.amc_payments?.reduce(
-            (sum: number, amcItem: any) => sum + (Number(amcItem.tong_amc) || 0), 
-            0
-          ) || 0;
-
           return {
             id: p.project_id,
             name: p.name || 'Dự án không tên',
             revenue: Number(p.pricing) || 0,
-            amc: totalAmc
+            amc: 0
           };
         });
 
