@@ -744,34 +744,45 @@ export default function AccountManagementPage() {
               <p className="text-xs text-slate-500 font-semibold mt-1">Ma trận quyền dùng chung cho Flow, Task và các module nghiệp vụ.</p>
             </div>
             <div className="overflow-auto">
-              <table className="min-w-[860px] w-full text-sm">
+              <table className="min-w-[1120px] w-full table-fixed text-sm">
                 <thead className="bg-slate-50 text-slate-500">
                   <tr>
-                    <th className="px-4 py-3 text-left font-black uppercase text-xs">Vai trò</th>
-                    <th className="px-4 py-3 text-left font-black uppercase text-xs">Mô tả</th>
+                    <th className="px-4 py-3 text-left font-black uppercase text-xs w-[150px]">Vai trò</th>
+                    <th className="px-4 py-3 text-left font-black uppercase text-xs w-[320px]">Mô tả</th>
                     {MODULES.map((module) => (
-                      <th key={module.key} className="px-3 py-3 text-center font-black uppercase text-xs">{module.label}</th>
+                      <th key={module.key} className="px-3 py-3 text-center font-black uppercase text-xs w-[72px]">{module.label}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {roles.map((role) => (
                     <tr key={role.role_key}>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-top">
                         <button
                           type="button"
                           onClick={() => startEditRole(role)}
                           className="text-left hover:opacity-80"
                         >
                           <RoleBadge accessRole={role.role_key} />
-                          <p className="mt-1 text-xs font-bold text-slate-500">{role.label}</p>
                         </button>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-600 max-w-xs">{role.description}</td>
+                      <td className="px-4 py-3 align-top">
+                        <div
+                          className="font-semibold text-slate-600 text-sm leading-5 overflow-hidden"
+                          style={{
+                            display: '-webkit-box',
+                            WebkitBoxOrient: 'vertical',
+                            WebkitLineClamp: 2,
+                          }}
+                          title={role.description}
+                        >
+                          {role.description}
+                        </div>
+                      </td>
                       {MODULES.map((module) => {
                         const allowed = roleModuleKeys(role.role_key).has(module.key);
                         return (
-                          <td key={module.key} className="px-3 py-3 text-center">
+                          <td key={module.key} className="px-3 py-3 text-center align-top">
                             {allowed ? (
                               <CheckCircle size={17} className="mx-auto text-emerald-600" />
                             ) : (
