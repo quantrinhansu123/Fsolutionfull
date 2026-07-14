@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
+import { UserRound, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-export default function LoginPage({ onLogin }: { onLogin: () => void }) {
+export default function LoginPage({
+  onLogin,
+  error,
+}: {
+  onLogin: (account: string, password: string) => Promise<void>;
+  error?: string | null;
+}) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('admin@f-solution.vn');
-  const [password, setPassword] = useState('password123');
+  const [account, setAccount] = useState('khachtest');
+  const [password, setPassword] = useState('123456');
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Giả lập loading 1s
-    setTimeout(() => {
+    setLoginError(null);
+    try {
+      await onLogin(account, password);
+    } catch (err: any) {
+      setLoginError(err.message || 'Không đăng nhập được');
+    } finally {
       setIsLoading(false);
-      onLogin();
-    }, 1200);
+    }
   };
 
   return (
@@ -39,23 +49,29 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
         {/* Login Form Card */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-500">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
+            {/* Account Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] ml-1">Email công việc</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] ml-1">Tài khoản / SĐT / Email</label>
               <div className="relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors">
-                  <Mail size={18} />
+                  <UserRound size={18} />
                 </div>
                 <input 
-                  type="email" 
+                  type="text" 
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
+                  value={account}
+                  onChange={(e) => setAccount(e.target.value)}
+                  placeholder="khachtest hoặc SĐT"
                   className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium"
                 />
               </div>
             </div>
+
+            {(loginError || error) && (
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">
+                {loginError || error}
+              </div>
+            )}
 
             {/* Password Input */}
             <div className="space-y-2">

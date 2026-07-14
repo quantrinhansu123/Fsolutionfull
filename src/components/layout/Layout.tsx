@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { useAuth } from '../../context/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { currentUser } = useAuth();
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -22,6 +24,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           setIsSidebarOpen(false); // Close on mobile after selection
         }} 
         onLogout={onLogout}
+        currentUser={currentUser}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -31,6 +34,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         {/* Header */}
         <Header 
           activeTab={activeTab}
+          currentUser={currentUser}
           onMenuClick={() => setIsSidebarOpen(true)} 
         />
 

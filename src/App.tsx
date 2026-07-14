@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Layout } from './components/layout/Layout';
 import { ProjectProvider } from './context/ProjectContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
 import CustomersPage from './pages/Customers';
 import BAPage from './pages/BA/index.jsx';
@@ -13,12 +14,20 @@ import SettingsPage from './pages/Settings/index.jsx';
 import BaoGiaPage from './pages/BaoGia';
 import LoginPage from './pages/Login';
 
-function App() {
+function AppShell() {
   const [activeTab, setActiveTab] = useState('Dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const { isAuthenticated, loading, error, login, logout } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm font-bold">
+        Đang đồng bộ tài khoản...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
+    return <LoginPage onLogin={login} error={error} />;
   }
 
   const renderContent = () => {
@@ -61,13 +70,21 @@ function App() {
         onTabChange={setActiveTab}
         onLogout={() => {
           if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
-            setIsAuthenticated(false);
+            logout();
           }
         }}
       >
         {renderContent()}
       </Layout>
     </ProjectProvider>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   );
 }
 

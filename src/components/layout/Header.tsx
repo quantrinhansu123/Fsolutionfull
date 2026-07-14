@@ -1,12 +1,19 @@
 import React from 'react';
 import { Search, Bell, User, ChevronRight, Menu } from 'lucide-react';
+import type { FlowUser } from '../../context/AuthContext';
 
 interface HeaderProps {
   onMenuClick?: () => void;
   activeTab: string;
+  currentUser?: FlowUser | null;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab }) => {
+const roleLabel = (user?: FlowUser | null) => {
+  if (!user) return '';
+  return user.accessRole === 'admin' ? 'Admin' : (user.role || 'Nhân viên');
+};
+
+export const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab, currentUser }) => {
   return (
     <header className="sticky top-0 h-16 bg-white border-b border-slate-200 z-40 flex items-center justify-between px-4 lg:px-8">
       {/* Left: Menu Toggle & Breadcrumbs */}
@@ -51,11 +58,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab }) => {
         {/* User Profile */}
         <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-slate-900">Admin</p>
-            <p className="text-xs text-slate-500 font-medium"></p>
+            <p className="text-sm font-bold text-slate-900">{currentUser?.fullName || 'Chưa chọn tài khoản'}</p>
+            <p className="text-xs text-slate-500 font-medium">{roleLabel(currentUser)}</p>
           </div>
           <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 flex items-center justify-center text-white font-bold text-lg rounded-lg overflow-hidden shadow-sm">
-            <User size={20} />
+            {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="w-full h-full object-cover" /> : <User size={20} />}
           </div>
         </div>
       </div>

@@ -14,11 +14,13 @@ import {
   LogOut
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import type { FlowUser } from '../../context/AuthContext';
 
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tabName: string) => void;
   onLogout?: () => void;
+  currentUser?: FlowUser | null;
   isOpen?: boolean;
   onClose?: () => void;
 }
@@ -28,27 +30,36 @@ interface MenuItem {
   label: string;
   icon: React.ElementType;
   badge?: number;
+  adminOnly?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeTab, 
   onTabChange, 
   onLogout,
+  currentUser,
   isOpen = true, 
   onClose 
 }) => {
+  const isAdmin = currentUser?.accessRole === 'admin';
+  const initials = (currentUser?.fullName || currentUser?.username || 'AD')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(-2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'AD';
   const menuItems: MenuItem[] = [
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'Customers', label: 'Khách hàng', icon: Users },
     { id: 'Marketing', label: 'Marketing', icon: Megaphone, badge: 2 },
     { id: 'Sale', label: 'Sale', icon: Briefcase },
     { id: 'BaoGia', label: 'Báo giá', icon: FileText },
-    { id: 'BA/SA', label: 'BA/SA', icon: FileSearch },
+    { id: 'BA/SA', label: 'BA/SA', icon: FileSearch, adminOnly: true },
     { id: 'Task', label: 'Task', icon: ClipboardList },
-    { id: 'Dev', label: 'Dev', icon: Code2 },
-    { id: 'CS', label: 'CS', icon: Headphones },
-    { id: 'Settings', label: 'Cấu hình', icon: Settings },
-  ];
+    { id: 'Dev', label: 'Dev', icon: Code2, adminOnly: true },
+    { id: 'CS', label: 'CS', icon: Headphones, adminOnly: true },
+    { id: 'Settings', label: 'Cấu hình', icon: Settings, adminOnly: true },
+  ].filter((item) => isAdmin || !item.adminOnly);
 
   return (
     <>
@@ -123,11 +134,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between gap-3 px-2">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 font-bold shadow-sm">
-                AD
+                {initials}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-800 truncate leading-tight">Nguyễn Văn A</p>
-                <p className="text-[11px] text-slate-500 font-medium">Admin</p>
+                <p className="text-sm font-bold text-slate-800 truncate leading-tight">{currentUser?.fullName || 'Chưa chọn tài khoản'}</p>
+                <p className="text-[11px] text-slate-500 font-medium">{isAdmin ? 'Admin' : currentUser?.role || 'Nhân viên'}</p>
               </div>
             </div>
             
