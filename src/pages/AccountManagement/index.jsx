@@ -32,17 +32,17 @@ const EMPTY_FORM = {
 };
 
 const MODULES = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'customers', label: 'Khách hàng' },
-  { key: 'marketing', label: 'Marketing' },
-  { key: 'sale', label: 'Sale' },
-  { key: 'bao_gia', label: 'Báo giá' },
-  { key: 'task', label: 'Task' },
-  { key: 'ba_sa', label: 'BA/SA' },
-  { key: 'dev', label: 'Dev' },
-  { key: 'cs', label: 'CS' },
-  { key: 'settings', label: 'Cấu hình' },
-  { key: 'accounts', label: 'Quản lý tài khoản' },
+  { key: 'dashboard', label: 'Dashboard', shortLabel: 'Dash' },
+  { key: 'customers', label: 'Khách hàng', shortLabel: 'KH' },
+  { key: 'marketing', label: 'Marketing', shortLabel: 'MKT' },
+  { key: 'sale', label: 'Sale', shortLabel: 'Sale' },
+  { key: 'bao_gia', label: 'Báo giá', shortLabel: 'BG' },
+  { key: 'task', label: 'Task', shortLabel: 'Task' },
+  { key: 'ba_sa', label: 'BA/SA', shortLabel: 'BA/SA' },
+  { key: 'dev', label: 'Dev', shortLabel: 'Dev' },
+  { key: 'cs', label: 'CS', shortLabel: 'CS' },
+  { key: 'settings', label: 'Cấu hình', shortLabel: 'CFG' },
+  { key: 'accounts', label: 'Quản lý tài khoản', shortLabel: 'TK' },
 ];
 
 const DEFAULT_ROLES = [
@@ -750,7 +750,13 @@ export default function AccountManagementPage() {
                     <th className="px-4 py-3 text-left font-black uppercase text-xs w-[150px]">Vai trò</th>
                     <th className="px-4 py-3 text-left font-black uppercase text-xs w-[320px]">Mô tả</th>
                     {MODULES.map((module) => (
-                      <th key={module.key} className="px-3 py-3 text-center font-black uppercase text-xs w-[72px]">{module.label}</th>
+                      <th
+                        key={module.key}
+                        className="px-2 py-3 text-center font-black uppercase text-[11px] leading-none w-[72px]"
+                        title={module.label}
+                      >
+                        <span className="inline-block whitespace-nowrap">{module.shortLabel}</span>
+                      </th>
                     ))}
                   </tr>
                 </thead>
