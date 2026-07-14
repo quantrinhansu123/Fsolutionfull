@@ -8,6 +8,8 @@ const normalizeTaskUrl = (value?: string) => {
 };
 
 const TASK_APP_URL = normalizeTaskUrl(import.meta.env.VITE_TASK_APP_URL);
+const FLOW_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const FLOW_SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export default function TaskPage() {
   const { currentUser } = useAuth();
@@ -16,6 +18,10 @@ export default function TaskPage() {
     if (currentUser?.userId) {
       url.searchParams.set('user_id', currentUser.userId);
       url.searchParams.set('source', 'flow');
+    }
+    if (FLOW_SUPABASE_URL && FLOW_SUPABASE_KEY) {
+      url.searchParams.set('supabase_url', FLOW_SUPABASE_URL);
+      url.searchParams.set('supabase_key', FLOW_SUPABASE_KEY);
     }
     return url.toString();
   }, [currentUser?.userId]);
