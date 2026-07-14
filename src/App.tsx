@@ -11,6 +11,7 @@ import CSPage from './pages/CS/index.jsx';
 import DevPage from './pages/Dev';
 import TaskPage from './pages/Task';
 import SettingsPage from './pages/Settings/index.jsx';
+import AccountManagementPage from './pages/AccountManagement/index.jsx';
 import BaoGiaPage from './pages/BaoGia';
 import LoginPage from './pages/Login';
 
@@ -53,6 +54,8 @@ function AppShell() {
         return <DevPage />;
       case 'Settings':
         return <SettingsPage />;
+      case 'Accounts':
+        return <AccountManagementPage />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-[60vh] text-slate-400 bg-white rounded-xl border border-slate-200 border-dashed">

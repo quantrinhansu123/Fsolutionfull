@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Headphones, 
   Settings,
+  KeyRound,
   X,
   LogOut
 } from 'lucide-react';
@@ -59,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'Dev', label: 'Dev', icon: Code2, adminOnly: true },
     { id: 'CS', label: 'CS', icon: Headphones, adminOnly: true },
     { id: 'Settings', label: 'Cấu hình', icon: Settings, adminOnly: true },
+    { id: 'Accounts', label: 'Quản lý tài khoản', icon: KeyRound, adminOnly: true },
   ].filter((item) => isAdmin || !item.adminOnly);
 
   return (
