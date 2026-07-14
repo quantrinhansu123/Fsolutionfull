@@ -188,8 +188,18 @@ export default function AccountManagementPage() {
 
       const nextRoles = (roleRows && roleRows.length ? roleRows : DEFAULT_ROLES).map((role) => ({
         role_key: role.role_key,
-        label: role.role_name || role.label || role.role_key,
-        description: role.description || '',
+        label:
+          role.role_key === 'admin'
+            ? 'Admin'
+            : role.role_key === 'worker'
+              ? 'Nhân viên'
+              : (role.role_name || role.label || role.role_key),
+        description:
+          role.role_key === 'admin'
+            ? 'Toàn quyền quản trị hệ thống, tài khoản, phân quyền và mọi module.'
+            : role.role_key === 'worker'
+              ? 'Quyền vận hành cơ bản: xem các module nghiệp vụ chung, không vào quản trị.'
+              : (role.description || ''),
         is_system: !!role.is_system,
       }));
       const nextPermissions = permissionRows && permissionRows.length ? permissionRows : DEFAULT_PERMISSIONS;
@@ -774,9 +784,6 @@ export default function AccountManagementPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
-            <div className="border-t border-slate-100 bg-blue-50/50 px-5 py-4 text-sm font-semibold text-blue-800">
-              Dữ liệu lưu ở `access_roles`, `role_permissions` và gán vào từng user qua `users.access_role`.
             </div>
           </div>
         </div>
