@@ -51,6 +51,7 @@ export default function TaskPage() {
       </div>
 
       <iframe
+        key={taskUrl}
         title="F-Solution Task"
         src={taskUrl}
         className="flex-1 w-full rounded-2xl border border-slate-200 bg-white shadow-sm"
