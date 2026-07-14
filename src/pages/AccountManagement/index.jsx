@@ -42,19 +42,50 @@ const MODULES = [
   { key: 'dev', label: 'Dev' },
   { key: 'cs', label: 'CS' },
   { key: 'settings', label: 'Cấu hình' },
+  { key: 'accounts', label: 'Quản lý tài khoản' },
 ];
 
-const ROLE_DEFINITIONS = {
-  admin: {
+const DEFAULT_ROLES = [
+  {
+    role_key: 'admin',
     label: 'Admin',
     description: 'Toàn quyền quản trị hệ thống, tài khoản, phân quyền và mọi module.',
-    modules: MODULES.map((module) => module.key),
+    is_system: true,
   },
-  worker: {
+  {
+    role_key: 'worker',
     label: 'Nhân viên',
     description: 'Quyền vận hành cơ bản: xem các module nghiệp vụ chung, không vào quản trị.',
-    modules: ['dashboard', 'customers', 'marketing', 'sale', 'bao_gia', 'task'],
+    is_system: true,
   },
+];
+
+const DEFAULT_PERMISSIONS = [
+  ...MODULES.map((module) => ({
+    role_key: 'admin',
+    module_key: module.key,
+    can_view: true,
+    can_create: true,
+    can_update: true,
+    can_delete: true,
+    can_manage: true,
+  })),
+  ...['dashboard', 'customers', 'marketing', 'sale', 'bao_gia', 'task'].map((moduleKey) => ({
+    role_key: 'worker',
+    module_key: moduleKey,
+    can_view: true,
+    can_create: true,
+    can_update: true,
+    can_delete: false,
+    can_manage: false,
+  })),
+];
+
+const EMPTY_ROLE_FORM = {
+  role_key: '',
+  role_name: '',
+  description: '',
+  modules: [],
 };
 
 const normalizeUser = (row) => ({
@@ -63,7 +94,7 @@ const normalizeUser = (row) => ({
   user_id: row.user_id || '',
   enabled: row.enabled !== false && row.status !== 'inactive',
   status: row.status || (row.enabled === false ? 'inactive' : 'active'),
-  access_role: row.access_role === 'admin' || row.role === 'admin' ? 'admin' : 'worker',
+  access_role: row.access_role || (row.role === 'admin' ? 'admin' : 'worker'),
 });
 
 const makeUserId = (form) => {
@@ -92,12 +123,13 @@ function StatusBadge({ user }) {
 
 function RoleBadge({ accessRole }) {
   const admin = accessRole === 'admin';
+  const worker = accessRole === 'worker' || !accessRole;
   return (
     <span className={cn(
       'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold',
       admin ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600',
     )}>
-      {admin ? 'Admin' : 'Nhân viên'}
+      {admin ? 'Admin' : worker ? 'Nhân viên' : accessRole}
     </span>
   );
 }
@@ -116,6 +148,11 @@ export default function AccountManagementPage() {
   const [editingId, setEditingId] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState('worker');
+  const [roles, setRoles] = useState(DEFAULT_ROLES);
+  const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS);
+  const [rbacReady, setRbacReady] = useState(true);
+  const [roleForm, setRoleForm] = useState(EMPTY_ROLE_FORM);
+  const [editingRoleKey, setEditingRoleKey] = useState(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -136,8 +173,42 @@ export default function AccountManagementPage() {
     }
   };
 
+  const fetchRbac = async () => {
+    try {
+      const { data: roleRows, error: roleError } = await supabase
+        .from('access_roles')
+        .select('*')
+        .order('role_name', { ascending: true });
+      if (roleError) throw roleError;
+
+      const { data: permissionRows, error: permissionError } = await supabase
+        .from('role_permissions')
+        .select('*');
+      if (permissionError) throw permissionError;
+
+      const nextRoles = (roleRows && roleRows.length ? roleRows : DEFAULT_ROLES).map((role) => ({
+        role_key: role.role_key,
+        label: role.role_name || role.label || role.role_key,
+        description: role.description || '',
+        is_system: !!role.is_system,
+      }));
+      const nextPermissions = permissionRows && permissionRows.length ? permissionRows : DEFAULT_PERMISSIONS;
+      setRoles(nextRoles);
+      setPermissions(nextPermissions);
+      setRbacReady(true);
+      setSelectedRole((current) => (
+        nextRoles.some((role) => role.role_key === current) ? current : nextRoles[0]?.role_key || 'worker'
+      ));
+    } catch (err) {
+      setRoles(DEFAULT_ROLES);
+      setPermissions(DEFAULT_PERMISSIONS);
+      setRbacReady(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchRbac();
   }, []);
 
   const filteredUsers = useMemo(() => {
@@ -157,10 +228,42 @@ export default function AccountManagementPage() {
   }, [query, roleFilter, users]);
 
   const selectedUser = users.find((user) => user.user_id === selectedUserId) || null;
+  const roleModuleKeys = (roleKey) => new Set(
+    permissions
+      .filter((permission) => permission.role_key === roleKey && permission.can_view !== false)
+      .map((permission) => permission.module_key),
+  );
 
   const resetForm = () => {
     setForm(EMPTY_FORM);
     setEditingId(null);
+  };
+
+  const resetRoleForm = () => {
+    setRoleForm(EMPTY_ROLE_FORM);
+    setEditingRoleKey(null);
+  };
+
+  const startEditRole = (role) => {
+    setEditingRoleKey(role.role_key);
+    setRoleForm({
+      role_key: role.role_key,
+      role_name: role.label,
+      description: role.description || '',
+      modules: Array.from(roleModuleKeys(role.role_key)),
+    });
+  };
+
+  const toggleRoleModule = (moduleKey) => {
+    setRoleForm((current) => {
+      const modules = new Set(current.modules);
+      if (modules.has(moduleKey)) {
+        modules.delete(moduleKey);
+      } else {
+        modules.add(moduleKey);
+      }
+      return { ...current, modules: Array.from(modules) };
+    });
   };
 
   const startEdit = (user) => {
@@ -253,6 +356,65 @@ export default function AccountManagementPage() {
       await refreshUsers();
     } catch (err) {
       setError(err.message || 'Không gán được quyền');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveRoleDefinition = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    setNotice('');
+    try {
+      if (!rbacReady) {
+        throw new Error('Chưa có bảng access_roles/role_permissions. Hãy chạy lại file supabase_flow_task_integration.sql trước.');
+      }
+
+      const roleName = roleForm.role_name.trim();
+      if (!roleName) throw new Error('Tên quyền là bắt buộc');
+      const roleKey = (editingRoleKey || roleForm.role_key || makeUserId({ username: roleName }))
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      if (!roleKey) throw new Error('Mã quyền không hợp lệ');
+
+      const { error: roleError } = await supabase.from('access_roles').upsert({
+        role_key: roleKey,
+        role_name: roleName,
+        description: roleForm.description.trim() || null,
+        is_system: roleKey === 'admin' || roleKey === 'worker',
+        updated_at: new Date().toISOString(),
+      });
+      if (roleError) throw roleError;
+
+      const { error: clearError } = await supabase
+        .from('role_permissions')
+        .delete()
+        .eq('role_key', roleKey);
+      if (clearError) throw clearError;
+
+      if (roleForm.modules.length) {
+        const rows = roleForm.modules.map((moduleKey) => ({
+          role_key: roleKey,
+          module_key: moduleKey,
+          can_view: true,
+          can_create: roleKey === 'admin',
+          can_update: roleKey === 'admin',
+          can_delete: roleKey === 'admin',
+          can_manage: roleKey === 'admin',
+          updated_at: new Date().toISOString(),
+        }));
+        const { error: permissionError } = await supabase.from('role_permissions').insert(rows);
+        if (permissionError) throw permissionError;
+      }
+
+      setNotice(editingRoleKey ? 'Đã cập nhật quyền' : 'Đã tạo quyền mới');
+      resetRoleForm();
+      await fetchRbac();
+    } catch (err) {
+      setError(err.message || 'Không lưu được định nghĩa quyền');
     } finally {
       setSaving(false);
     }
@@ -368,8 +530,9 @@ export default function AccountManagementPage() {
                 <label className="space-y-1">
                   <span className="text-xs font-black uppercase text-slate-500">Quyền</span>
                   <select value={form.access_role} onChange={(e) => setForm({ ...form, access_role: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                    <option value="worker">Nhân viên</option>
-                    <option value="admin">Admin</option>
+                    {roles.map((role) => (
+                      <option key={role.role_key} value={role.role_key}>{role.label}</option>
+                    ))}
                   </select>
                 </label>
               </div>
@@ -398,8 +561,9 @@ export default function AccountManagementPage() {
                 </div>
                 <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white">
                   <option value="all">Tất cả quyền</option>
-                  <option value="admin">Admin</option>
-                  <option value="worker">Nhân viên</option>
+                  {roles.map((role) => (
+                    <option key={role.role_key} value={role.role_key}>{role.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -461,7 +625,7 @@ export default function AccountManagementPage() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
             <div>
               <h2 className="text-lg font-black text-slate-900">Gán quyền nhân sự</h2>
-              <p className="text-xs text-slate-500 font-semibold mt-1">Quyền được lưu vào cột access_role của bảng users.</p>
+              <p className="text-xs text-slate-500 font-semibold mt-1">Gán quyền cho từng tài khoản trong bảng users.</p>
             </div>
             <label className="space-y-1 block">
               <span className="text-xs font-black uppercase text-slate-500">Nhân sự</span>
@@ -476,8 +640,9 @@ export default function AccountManagementPage() {
             <label className="space-y-1 block">
               <span className="text-xs font-black uppercase text-slate-500">Vai trò</span>
               <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold bg-white">
-                <option value="worker">Nhân viên</option>
-                <option value="admin">Admin</option>
+                {roles.map((role) => (
+                  <option key={role.role_key} value={role.role_key}>{role.label}</option>
+                ))}
               </select>
             </label>
             <button type="button" onClick={assignRole} disabled={!selectedUserId || saving} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-50">
@@ -491,12 +656,82 @@ export default function AccountManagementPage() {
                 <div className="mt-2"><RoleBadge accessRole={selectedUser.access_role} /></div>
               </div>
             )}
+
+            <form onSubmit={saveRoleDefinition} className="pt-5 border-t border-slate-100 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">Định nghĩa quyền</h2>
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
+                    Tạo nhóm quyền và chọn module được phép truy cập.
+                  </p>
+                </div>
+                {editingRoleKey && (
+                  <button type="button" onClick={resetRoleForm} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100">
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
+              {!rbacReady && (
+                <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
+                  Chưa có bảng RBAC. Chạy lại file SQL mới trước khi lưu quyền.
+                </div>
+              )}
+              <label className="space-y-1 block">
+                <span className="text-xs font-black uppercase text-slate-500">Mã quyền</span>
+                <input
+                  value={roleForm.role_key}
+                  onChange={(e) => setRoleForm({ ...roleForm, role_key: e.target.value })}
+                  disabled={!!editingRoleKey}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold disabled:bg-slate-50"
+                  placeholder="sale_manager"
+                />
+              </label>
+              <label className="space-y-1 block">
+                <span className="text-xs font-black uppercase text-slate-500">Tên quyền</span>
+                <input
+                  value={roleForm.role_name}
+                  onChange={(e) => setRoleForm({ ...roleForm, role_name: e.target.value })}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold"
+                  placeholder="Trưởng nhóm Sale"
+                />
+              </label>
+              <label className="space-y-1 block">
+                <span className="text-xs font-black uppercase text-slate-500">Mô tả</span>
+                <textarea
+                  value={roleForm.description}
+                  onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold resize-none"
+                  placeholder="Mô tả phạm vi quyền..."
+                />
+              </label>
+              <div className="space-y-2">
+                <p className="text-xs font-black uppercase text-slate-500">Module được phép</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {MODULES.map((module) => (
+                    <label key={module.key} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={roleForm.modules.includes(module.key)}
+                        onChange={() => toggleRoleModule(module.key)}
+                        className="h-4 w-4 accent-blue-600"
+                      />
+                      {module.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <button disabled={saving} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-50">
+                {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+                {editingRoleKey ? 'Lưu định nghĩa quyền' : 'Tạo quyền mới'}
+              </button>
+            </form>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-slate-100">
-              <h2 className="text-lg font-black text-slate-900">Định nghĩa quyền</h2>
-              <p className="text-xs text-slate-500 font-semibold mt-1">Bản quyền hiện dùng chung cho Flow và Task.</p>
+              <h2 className="text-lg font-black text-slate-900">Bảng phân quyền</h2>
+              <p className="text-xs text-slate-500 font-semibold mt-1">Ma trận quyền dùng chung cho Flow, Task và các module nghiệp vụ.</p>
             </div>
             <div className="overflow-auto">
               <table className="min-w-[860px] w-full text-sm">
@@ -510,12 +745,21 @@ export default function AccountManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {Object.entries(ROLE_DEFINITIONS).map(([key, role]) => (
-                    <tr key={key}>
-                      <td className="px-4 py-3"><RoleBadge accessRole={key} /></td>
+                  {roles.map((role) => (
+                    <tr key={role.role_key}>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => startEditRole(role)}
+                          className="text-left hover:opacity-80"
+                        >
+                          <RoleBadge accessRole={role.role_key} />
+                          <p className="mt-1 text-xs font-bold text-slate-500">{role.label}</p>
+                        </button>
+                      </td>
                       <td className="px-4 py-3 font-semibold text-slate-600 max-w-xs">{role.description}</td>
                       {MODULES.map((module) => {
-                        const allowed = role.modules.includes(module.key);
+                        const allowed = roleModuleKeys(role.role_key).has(module.key);
                         return (
                           <td key={module.key} className="px-3 py-3 text-center">
                             {allowed ? (
@@ -532,7 +776,7 @@ export default function AccountManagementPage() {
               </table>
             </div>
             <div className="border-t border-slate-100 bg-blue-50/50 px-5 py-4 text-sm font-semibold text-blue-800">
-              Giai đoạn này dùng 2 quyền lõi: Admin và Nhân viên. Nếu cần matrix chi tiết theo từng hành động, sẽ thêm bảng quyền riêng ở Supabase sau.
+              Dữ liệu lưu ở `access_roles`, `role_permissions` và gán vào từng user qua `users.access_role`.
             </div>
           </div>
         </div>
