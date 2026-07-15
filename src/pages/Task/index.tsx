@@ -13,10 +13,11 @@ const FLOW_SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export default function TaskPage() {
   const { currentUser } = useAuth();
+  const currentUserId = currentUser?.userId;
   const taskUrl = useMemo(() => {
     const url = new URL(TASK_APP_URL);
-    if (currentUser?.userId) {
-      url.searchParams.set('user_id', currentUser.userId);
+    if (currentUserId) {
+      url.searchParams.set('user_id', currentUserId);
       url.searchParams.set('source', 'flow');
     }
     if (FLOW_SUPABASE_URL && FLOW_SUPABASE_KEY) {
@@ -24,7 +25,7 @@ export default function TaskPage() {
       url.searchParams.set('supabase_key', FLOW_SUPABASE_KEY);
     }
     return url.toString();
-  }, [currentUser?.userId]);
+  }, [currentUserId]);
 
   return (
     <div className="h-[calc(100vh-6rem)] min-h-[720px] flex flex-col gap-4">
@@ -60,6 +61,7 @@ export default function TaskPage() {
         key={taskUrl}
         title="F-Solution Task"
         src={taskUrl}
+        allow="geolocation; camera; microphone; clipboard-read; clipboard-write"
         className="flex-1 w-full rounded-2xl border border-slate-200 bg-white shadow-sm"
       />
     </div>
