@@ -5,16 +5,25 @@ import { MarketingSummary } from './components/MarketingSummary';
 import { LeadFormModal } from './components/LeadFormModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 
 export default function MarketingPage() {
+  const { currentUser } = useAuth();
   const [leads, setLeads] = useState([]);
   const [formModal, setFormModal] = useState({ isOpen: false, mode: 'add', lead: null });
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, lead: null });
+  const isAdmin = currentUser?.accessRole === 'admin';
+  const currentUserId = currentUser?.userId;
 
   // Fetch leads from Supabase database
   const fetchLeads = async () => {
     try {
-      const { data, error } = await supabase
+      if (!isAdmin && !currentUserId) {
+        setLeads([]);
+        return;
+      }
+
+      let query = supabase
         .from('leads')
         .select(`
           *,
@@ -22,8 +31,13 @@ export default function MarketingPage() {
             user_id,
             full_name
           )
-        `)
-        .order('created_at', { ascending: false });
+        `);
+
+      if (!isAdmin) {
+        query = query.or(`phu_trach.eq.${currentUserId},created_by_staff_id.eq.${currentUserId}`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -56,7 +70,7 @@ export default function MarketingPage() {
 
   useEffect(() => {
     fetchLeads();
-  }, []);
+  }, [currentUserId, isAdmin]);
 
   const handleAddLead = () => {
     setFormModal({ isOpen: true, mode: 'add', lead: null });
@@ -100,12 +114,15 @@ export default function MarketingPage() {
             trang_thai,
             hop_le,
             thu_nhap,
+            phu_trach: isAdmin ? null : currentUserId || null,
+            created_by_staff_id: currentUserId || null,
+            created_by_staff_name: currentUser?.fullName || null,
           }]);
 
         if (error) throw error;
       } else {
         // Cập nhật lead
-        const { error } = await supabase
+        let query = supabase
           .from('leads')
           .update({
             customer_name: formData.name,
@@ -123,6 +140,12 @@ export default function MarketingPage() {
           })
           .eq('id', formModal.lead.id);
 
+        if (!isAdmin) {
+          query = query.or(`phu_trach.eq.${currentUserId},created_by_staff_id.eq.${currentUserId}`);
+        }
+
+        const { error } = await query;
+
         if (error) throw error;
       }
 
@@ -135,10 +158,16 @@ export default function MarketingPage() {
 
   const handleConfirmDelete = async (leadId) => {
     try {
-      const { error } = await supabase
+      let query = supabase
         .from('leads')
         .delete()
         .eq('id', leadId);
+
+      if (!isAdmin) {
+        query = query.or(`phu_trach.eq.${currentUserId},created_by_staff_id.eq.${currentUserId}`);
+      }
+
+      const { error } = await query;
 
       if (error) throw error;
 

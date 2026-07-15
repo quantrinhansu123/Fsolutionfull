@@ -7,6 +7,7 @@ import { DevTicketModal, TICKET_TYPE_MAP } from './components/DevTicketModal';
 import { useProject } from '../../context/ProjectContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Plus, Filter, Code2, Sparkles, User, RefreshCw, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 // Tỷ lệ mặc định bộ phận Dev nếu không có trong income_rate_config
 const DEFAULT_DEV_RATE = 37;
@@ -15,6 +16,7 @@ const TOTAL_STANDARD_POINTS = 27;
 
 export default function DevPage() {
   const { projects, selectedProject, setSelectedProjectId } = useProject();
+  const { currentUser } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +25,8 @@ export default function DevPage() {
   const [selectedDev, setSelectedDev] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
+  const isAdmin = currentUser?.accessRole === 'admin';
+  const currentUserId = currentUser?.userId;
 
   const getDevFeatureId = async (projectId: string) => {
     const { data: existing, error: findError } = await supabase
@@ -82,6 +86,10 @@ export default function DevPage() {
     try {
       setLoading(true);
       setError(null);
+      if (!isAdmin && !currentUserId) {
+        setTickets([]);
+        return;
+      }
 
       let featureQuery = supabase
         .from('features')
@@ -109,12 +117,17 @@ export default function DevPage() {
       const featureProjectMap = new Map(featureRows.map((f: any) => [f.feature_id, f.project_id]));
       const userNameMap = new Map((users || []).map((u: any) => [u.user_id, u.full_name]));
 
-      const { data, error: fetchError } = await supabase
+      let taskQuery = supabase
         .from('tasks')
         .select('*')
         .in('feature_id', featureIds)
-        .is('parent_task_id', null)
-        .order('created_at', { ascending: false });
+        .is('parent_task_id', null);
+
+      if (!isAdmin) {
+        taskQuery = taskQuery.eq('assigned_to', currentUserId);
+      }
+
+      const { data, error: fetchError } = await taskQuery.order('created_at', { ascending: false });
       if (fetchError) throw fetchError;
 
       if (data) {
@@ -152,7 +165,7 @@ export default function DevPage() {
   useEffect(() => {
     fetchTickets();
     fetchDevRate();
-  }, [selectedProject.id]);
+  }, [selectedProject.id, currentUserId, isAdmin]);
 
   // ─── CRUD Handlers ────────────────────────────────────────────────────────
 
@@ -182,17 +195,23 @@ export default function DevPage() {
 
       if (editingTicket) {
         // Cập nhật task
-        const { error: updateError } = await supabase
+        let query = supabase
           .from('tasks')
           .update({
             name: formData.name,
             feature_id: featureId,
-            assigned_to: formData.phu_trach || null,
+            assigned_to: isAdmin ? formData.phu_trach || null : currentUserId || null,
             status: 'done',
             content_blocks: taskContent,
             updated_at: new Date().toISOString(),
           })
           .eq('task_id', editingTicket.id);
+
+        if (!isAdmin) {
+          query = query.eq('assigned_to', currentUserId);
+        }
+
+        const { error: updateError } = await query;
 
         if (updateError) throw updateError;
       } else {
@@ -202,7 +221,7 @@ export default function DevPage() {
           .insert([{
             feature_id: featureId,
             name: formData.name,
-            assigned_to: formData.phu_trach || null,
+            assigned_to: isAdmin ? formData.phu_trach || null : currentUserId || null,
             status: 'done',
             content_blocks: taskContent,
           }]);
@@ -222,10 +241,16 @@ export default function DevPage() {
   const handleDeleteTicket = async (id: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa Task này không?')) return;
     try {
-      const { error: deleteError } = await supabase
+      let query = supabase
         .from('tasks')
         .delete()
         .eq('task_id', id);
+
+      if (!isAdmin) {
+        query = query.eq('assigned_to', currentUserId);
+      }
+
+      const { error: deleteError } = await query;
 
       if (deleteError) throw deleteError;
       fetchTickets();

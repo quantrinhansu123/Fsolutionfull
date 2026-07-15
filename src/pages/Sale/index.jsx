@@ -5,6 +5,7 @@ import { DemoModal } from './components/DemoModal';
 import { Plus, LayoutGrid, FileText, TrendingUp, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 
 const SUB_TABS = [
   { id: 'demo', label: 'Demo', icon: LayoutGrid },
@@ -31,6 +32,7 @@ const formatDateToUI = (dateStr) => {
 };
 
 export default function SalePage({ onTabChange }) {
+  const { currentUser } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('demo');
   const [demos, setDemos] = useState([]);
   const [contracts, setContracts] = useState([]);
@@ -38,13 +40,25 @@ export default function SalePage({ onTabChange }) {
   const [leads, setLeads] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDemo, setEditingDemo] = useState(null);
+  const isAdmin = currentUser?.accessRole === 'admin';
+  const currentUserId = currentUser?.userId;
 
   const fetchLeads = async () => {
     try {
-      const { data, error } = await supabase
+      if (!isAdmin && !currentUserId) {
+        setLeads([]);
+        return;
+      }
+
+      let query = supabase
         .from('leads')
-        .select('id, ho_ten, so_dien_thoai')
-        .order('created_at', { ascending: false });
+        .select('id, ho_ten, so_dien_thoai');
+
+      if (!isAdmin) {
+        query = query.or(`phu_trach.eq.${currentUserId},created_by_staff_id.eq.${currentUserId}`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       setLeads(data || []);
@@ -69,10 +83,20 @@ export default function SalePage({ onTabChange }) {
 
   const fetchDemos = async () => {
     try {
-      const { data, error } = await supabase
+      if (!isAdmin && !currentUserId) {
+        setDemos([]);
+        return;
+      }
+
+      let query = supabase
         .from('opportunities')
-        .select('*, users:sale_phu_trach(user_id, full_name)')
-        .order('created_at', { ascending: false });
+        .select('*, users:sale_phu_trach(user_id, full_name)');
+
+      if (!isAdmin) {
+        query = query.eq('sale_phu_trach', currentUserId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -146,7 +170,7 @@ export default function SalePage({ onTabChange }) {
     fetchContracts();
     fetchUsers();
     fetchLeads();
-  }, []);
+  }, [currentUserId, isAdmin]);
 
   const handleSaveDemo = async (formData) => {
     try {
@@ -154,7 +178,7 @@ export default function SalePage({ onTabChange }) {
       const thu_nhap_demo = formData.isValid ? 50000 : 0;
 
       if (editingDemo) {
-        const { error } = await supabase
+        let query = supabase
           .from('opportunities')
           .update({
             ten_co_hoi: formData.opportunityName,
@@ -164,10 +188,16 @@ export default function SalePage({ onTabChange }) {
             link_bien_ban: formData.minutesLink || null,
             ghi_chu: formData.activityLog || null,
             thu_nhap_demo,
-            sale_phu_trach: formData.salePhuTrach || null,
+            sale_phu_trach: isAdmin ? formData.salePhuTrach || null : currentUserId || null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingDemo.id);
+
+        if (!isAdmin) {
+          query = query.eq('sale_phu_trach', currentUserId);
+        }
+
+        const { error } = await query;
 
         if (error) throw error;
       } else {
@@ -181,7 +211,7 @@ export default function SalePage({ onTabChange }) {
             link_bien_ban: formData.minutesLink || null,
             ghi_chu: formData.activityLog || null,
             thu_nhap_demo,
-            sale_phu_trach: formData.salePhuTrach || null,
+            sale_phu_trach: isAdmin ? formData.salePhuTrach || null : currentUserId || null,
             giai_doan: 'demo',
           }]);
 
@@ -200,10 +230,16 @@ export default function SalePage({ onTabChange }) {
   const handleDeleteDemo = async (id) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa Demo này không?')) {
       try {
-        const { error } = await supabase
+        let query = supabase
           .from('opportunities')
           .delete()
           .eq('id', id);
+
+        if (!isAdmin) {
+          query = query.eq('sale_phu_trach', currentUserId);
+        }
+
+        const { error } = await query;
 
         if (error) throw error;
 

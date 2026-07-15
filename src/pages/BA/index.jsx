@@ -6,11 +6,13 @@ import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { useProject } from '../../context/ProjectContext';
 import { Plus, Filter, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 
 const FALLBACK_PROJECT_FUND = 0;
 
 export default function BAPage() {
   const { projects, selectedProject, setSelectedProjectId } = useProject();
+  const { currentUser } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,12 +22,18 @@ export default function BAPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState(null);
   const [deletingTicket, setDeletingTicket] = useState(null);
+  const isAdmin = currentUser?.accessRole === 'admin';
+  const currentUserId = currentUser?.userId;
 
   // Tải danh sách ticket BA từ Supabase
   const fetchTickets = async () => {
     try {
       setLoading(true);
       setError(null);
+      if (!isAdmin && !currentUserId) {
+        setTickets([]);
+        return;
+      }
 
       let query = supabase
         .from('tickets')
@@ -53,6 +61,9 @@ export default function BAPage() {
       if (selectedProject.id !== 'all') {
         query = query.eq('project_id', selectedProject.id);
       }
+      if (!isAdmin) {
+        query = query.eq('phu_trach', currentUserId);
+      }
 
       const { data, error: fetchError } = await query.order('created_at', { ascending: false });
 
@@ -71,7 +82,7 @@ export default function BAPage() {
 
   useEffect(() => {
     fetchTickets();
-  }, [selectedProject.id]);
+  }, [selectedProject.id, currentUserId, isAdmin]);
 
   const handleAddTicket = () => {
     setEditingTicket(null);
@@ -91,10 +102,16 @@ export default function BAPage() {
   const handleConfirmDelete = async () => {
     if (deletingTicket) {
       try {
-        const { error: deleteError } = await supabase
+        let query = supabase
           .from('tickets')
           .delete()
           .eq('id', deletingTicket.id);
+
+        if (!isAdmin) {
+          query = query.eq('phu_trach', currentUserId);
+        }
+
+        const { error: deleteError } = await query;
 
         if (deleteError) throw deleteError;
 
@@ -117,18 +134,24 @@ export default function BAPage() {
 
       if (editingTicket) {
         // Cập nhật ticket
-        const { error: updateError } = await supabase
+        let query = supabase
           .from('tickets')
           .update({
             tieu_de: formData.name,
             project_id: formData.projectId || null,
             tai_lieu_url: formData.docLink || null,
             co_tai_lieu: !!formData.docLink,
-            phu_trach: formData.phu_trach || null,
+            phu_trach: isAdmin ? formData.phu_trach || null : currentUserId || null,
             thu_nhap: calculatedIncome,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingTicket.id);
+
+        if (!isAdmin) {
+          query = query.eq('phu_trach', currentUserId);
+        }
+
+        const { error: updateError } = await query;
 
         if (updateError) throw updateError;
       } else {
@@ -141,7 +164,7 @@ export default function BAPage() {
             project_id: formData.projectId || null,
             tai_lieu_url: formData.docLink || null,
             co_tai_lieu: !!formData.docLink,
-            phu_trach: formData.phu_trach || null,
+            phu_trach: isAdmin ? formData.phu_trach || null : currentUserId || null,
             bo_phan: 'ba',
             loai: 'ba',
             trang_thai: 'in_progress',

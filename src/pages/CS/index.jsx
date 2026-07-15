@@ -6,9 +6,11 @@ import { CSTicketModal } from './components/CSTicketModal';
 import { useProject } from '../../context/ProjectContext';
 import { Plus, Filter, Headphones, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 
 export default function CSPage() {
   const { projects, selectedProject, setSelectedProjectId } = useProject();
+  const { currentUser } = useAuth();
 
   const [tickets, setTickets] = useState([]);
   const [users, setUsers] = useState([]);
@@ -21,6 +23,8 @@ export default function CSPage() {
   const [editingTicket, setEditingTicket] = useState(null);
   const [deletingTicket, setDeletingTicket] = useState(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const isAdmin = currentUser?.accessRole === 'admin';
+  const currentUserId = currentUser?.userId;
 
   // Fetch real users list for dropdown
   const fetchUsers = async () => {
@@ -84,6 +88,10 @@ export default function CSPage() {
     try {
       setLoading(true);
       setError(null);
+      if (!isAdmin && !currentUserId) {
+        setTickets([]);
+        return;
+      }
 
       let query = supabase
         .from('tickets')
@@ -108,6 +116,9 @@ export default function CSPage() {
 
       if (selectedProject.id !== 'all') {
         query = query.eq('project_id', selectedProject.id);
+      }
+      if (!isAdmin) {
+        query = query.eq('phu_trach', currentUserId);
       }
 
       const { data, error: fetchError } = await query.order('created_at', { ascending: false });
@@ -134,7 +145,7 @@ export default function CSPage() {
 
   useEffect(() => {
     refreshAll();
-  }, [selectedProject.id]);
+  }, [selectedProject.id, currentUserId, isAdmin]);
 
   const handleAddTicket = () => {
     setEditingTicket(null);
@@ -154,10 +165,15 @@ export default function CSPage() {
   const handleConfirmDelete = async () => {
     if (!deletingTicket) return;
     try {
-      const { error: deleteError } = await supabase
+      let query = supabase
         .from('tickets')
         .delete()
         .eq('id', deletingTicket.id);
+      if (!isAdmin) {
+        query = query.eq('phu_trach', currentUserId);
+      }
+
+      const { error: deleteError } = await query;
       if (deleteError) throw deleteError;
       setIsDeleteConfirmOpen(false);
       setDeletingTicket(null);
@@ -176,19 +192,24 @@ export default function CSPage() {
       const calculatedIncome = Math.round(projPricing * (csRate / 100));
 
       if (editingTicket) {
-        const { error: updateError } = await supabase
+        let query = supabase
           .from('tickets')
           .update({
             tieu_de: formData.name,
             project_id: formData.projectId || null,
             loai: formData.type,
-            phu_trach: formData.phuTrach || null,
+            phu_trach: isAdmin ? formData.phuTrach || null : currentUserId || null,
             khach_xac_nhan: formData.customerConfirmed,
             loi_sau_trien_khai: formData.hasError,
             thu_nhap: calculatedIncome,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingTicket.id);
+        if (!isAdmin) {
+          query = query.eq('phu_trach', currentUserId);
+        }
+
+        const { error: updateError } = await query;
         if (updateError) throw updateError;
       } else {
         const { error: insertError } = await supabase
@@ -199,7 +220,7 @@ export default function CSPage() {
             project_id: formData.projectId || null,
             loai: formData.type,
             bo_phan: 'cs',
-            phu_trach: formData.phuTrach || null,
+            phu_trach: isAdmin ? formData.phuTrach || null : currentUserId || null,
             trang_thai: 'in_progress',
             khach_xac_nhan: formData.customerConfirmed,
             loi_sau_trien_khai: formData.hasError,
